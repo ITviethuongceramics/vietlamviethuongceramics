@@ -1,0 +1,93 @@
+[
+  {
+    "id": 1775191827975,
+    "fullName": "Thanh Hồ",
+    "email": "nhahome756@gmail.com",
+    "phone": "038112312",
+    "position": "Thực tập sinh",
+    "experience": "1-2 năm",
+    "address": "Huyện Đại Lộc",
+    "coverLetter": "không",
+    "cv": "Footder Viá»t HÆ°Æ¡ng.png",
+    "receivedAt": "2026-04-03T04:50:27.975Z",
+    "emailSent": true
+  },
+  {
+    "id": 1775197105749,
+    "fullName": "Thanh Hồ",
+    "email": "nhahome756@gmail.com",
+    "phone": "0283123313",
+    "position": "Nhân viên thiết kế",
+    "experience": "1-2 năm",
+    "address": "Huyện Đại Lộc",
+    "coverLetter": "không",
+    "cv": "Footder Viá»t HÆ°Æ¡ng.png",
+    "receivedAt": "2026-04-03T06:18:25.749Z",
+    "emailSent": true
+  },
+  {
+    "id": 1775197359444,
+    "fullName": "Thanh Hồ",
+    "email": "nhahome756@gmail.com",
+    "phone": "037213312",
+    "position": "Nhân viên thiết kế",
+    "experience": "3+ năm",
+    "address": "Huyện Đại Lộc",
+    "coverLetter": "không",
+    "cv": "1231242`.pdf",
+    "receivedAt": "2026-04-03T06:22:39.444Z",
+    "emailSent": true
+  },
+  {
+    "id": 1775197643121,
+    "fullName": "thab",
+    "email": "nhahome756@gmail.com",
+    "phone": "09182312122",
+    "position": "Nhân viên sản xuất / thợ gốm",
+    "experience": "1-2 năm",
+    "address": "VND",
+    "coverLetter": "khog",
+    "cv": "434162634_812120810934162_7588502226425089762_n.jpg",
+    "receivedAt": "2026-04-03T06:27:23.121Z",
+    "emailSent": true
+  },
+  {
+    "id": 1775197834238,
+    "fullName": "Nguyễn Văn A",
+    "email": "nhahome756@gmail.com",
+    "phone": "0901234567",
+    "position": "Nhân viên kinh doanh",
+    "experience": "1 - 2 năm",
+    "address": "Đà Nẵng",
+    "coverLetter": "Tôi muốn ứng tuyển vào công ty Việt Hương Ceramics",
+    "cv": null,
+    "receivedAt": "2026-04-03T06:30:34.238Z",
+    "emailSent": true
+  },
+  {
+    "id": 1775198148511,
+    "fullName": "Nguyễn Văn A",
+    "email": "nhahome756@gmail.com",
+    "phone": "0901234567",
+    "position": "Nhân viên kinh doanh",
+    "experience": "1 - 2 năm",
+    "address": "Đà Nẵng",
+    "coverLetter": "Tôi muốn ứng tuyển vào công ty Việt Hương Ceramics",
+    "cv": null,
+    "receivedAt": "2026-04-03T06:35:48.511Z",
+    "emailSent": true
+  },
+  {
+    "id": 1775198308748,
+    "fullName": "Nguyễn Văn A",
+    "email": "nhahome756@gmail.com",
+    "phone": "0901234567",
+    "position": "Nhân viên kinh doanh",
+    "experience": "1 - 2 năm",
+    "address": "Đà Nẵng",
+    "coverLetter": "Tôi muốn ứng tuyển vào công ty Việt Hương Ceramics",
+    "cv": null,
+    "receivedAt": "2026-04-03T06:38:28.748Z",
+    "emailSent": true
+  }
+]
