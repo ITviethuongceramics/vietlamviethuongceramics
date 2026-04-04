@@ -3,20 +3,20 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const Brevo = require('@getbrevo/brevo');
+const SibApiV3Sdk = require('@getbrevo/brevo');
 const { candidateEmailHtml, hrEmailHtml } = require('./email_templates');
 const { uploadCV, appendToSheet } = require('../services/google');
 
 // ── Brevo API ────────────────────────────────────────────────
-const brevoClient = Brevo.ApiClient.instance;
-brevoClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
-const emailApi = new Brevo.TransactionalEmailsApi();
+const defaultClient = SibApiV3Sdk.ApiClient.instance;
+defaultClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
+const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
 async function sendMail({ to, subject, html, attachments }) {
-  const email = new Brevo.SendSmtpEmail();
-  email.sender = { name: 'Việt Hương Ceramics', email: process.env.GMAIL_USER };
-  email.to = [{ email: to }];
-  email.subject = subject;
+  const email = new SibApiV3Sdk.SendSmtpEmail();
+  email.sender      = { name: 'Việt Hương Ceramics', email: process.env.GMAIL_USER };
+  email.to          = [{ email: to }];
+  email.subject     = subject;
   email.htmlContent = html;
   if (attachments && attachments.length > 0) {
     email.attachment = attachments.map(a => ({
@@ -24,7 +24,7 @@ async function sendMail({ to, subject, html, attachments }) {
       content: fs.readFileSync(a.path).toString('base64'),
     }));
   }
-  return emailApi.sendTransacEmail(email);
+  return apiInstance.sendTransacEmail(email);
 }
 
 // ── Multer config ────────────────────────────────────────────
@@ -119,7 +119,7 @@ router.post('/apply', handleUpload, async (req, res) => {
     return res.status(400).json({ success: false, message: 'Vui long dien day du thong tin bat buoc.', errors });
   }
 
-  // ── Upload CV lên Cloudinary ─────────────────────────────
+  // ── Upload CV ────────────────────────────────────────────
   let cvLink = null;
   if (cvFile) {
     try {
@@ -131,40 +131,41 @@ router.post('/apply', handleUpload, async (req, res) => {
 
   // ── Lưu hồ sơ ───────────────────────────────────────────
   const record = {
-    id: Date.now(),
-    fullName:    _fullName,
-    email:       _email,
-    phone:       _phone,
-    position:    _position,
-    experience:  _experience || '',
-    address:     _address    || '',
-    cvFileName:  cvLink || 'Không có',
-    receivedAt:  new Date().toISOString(),
+    id:         Date.now(),
+    fullName:   _fullName,
+    email:      _email,
+    phone:      _phone,
+    position:   _position,
+    experience: _experience || '',
+    address:    _address    || '',
+    cvFileName: cvLink      || 'Không có',
+    receivedAt: new Date().toISOString(),
   };
 
   saveRecord(record);
   appendToSheet(record).catch(err => console.error('[SHEETS ERROR]', err.message));
   res.json({ success: true });
 
-  // ── Gửi 2 email song song ────────────────────────────────
+  // ── Gửi email song song ──────────────────────────────────
   Promise.all([
     sendMail({
-      to: _email,
+      to:      _email,
       subject: 'Xác nhận nhận hồ sơ ứng tuyển — Việt Hương Ceramics',
-      html: candidateEmailHtml({ fullName: _fullName, position: _position, experience: _experience, phone: _phone, address: _address, cvFile }),
-    }),
+      html:    candidateEmailHtml({ fullName: _fullName, position: _position, experience: _experience, phone: _phone, address: _address, cvFile }),
+    }).then(() => console.log('[EMAIL OK] Ứng viên:', _email))
+      .catch(err => console.error('[EMAIL LỖI] Ứng viên:', err.message)),
+
     sendMail({
-      to: process.env.HR_MAIL,
-      subject: `[Ứng tuyển mới] ${_fullName} — ${_position}`,
-      html: hrEmailHtml({ fullName: _fullName, email: _email, phone: _phone, position: _position, experience: _experience, address: _address, coverLetter: _coverLetter, cvFile }),
+      to:          process.env.HR_MAIL,
+      subject:     `[Ứng tuyển mới] ${_fullName} — ${_position}`,
+      html:        hrEmailHtml({ fullName: _fullName, email: _email, phone: _phone, position: _position, experience: _experience, address: _address, coverLetter: _coverLetter, cvFile }),
       attachments: cvFile ? [{ filename: cvFile.originalname, path: cvFile.path }] : [],
-    }),
-  ])
-  .then(() => {
+    }).then(() => console.log('[EMAIL OK] HR:', process.env.HR_MAIL))
+      .catch(err => console.error('[EMAIL LỖI] HR:', err.message)),
+  ]).then(() => {
     markEmailSent(record);
     if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch {} }
-  })
-  .catch(err => console.error('[EMAIL ERROR] id:', record.id, '|', err.message));
+  });
 });
 
 module.exports = router;

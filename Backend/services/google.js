@@ -21,28 +21,29 @@ const auth = new google.auth.GoogleAuth({
 });
 
 async function uploadCV(filePath, fileName) {
-const result = await cloudinary.uploader.upload(filePath, {
-  resource_type: 'image', 
-  folder: 'cv-viet-huong',
-  use_filename: true,
-  unique_filename: true,
-});
+  const ext = fileName.split('.').pop().toLowerCase();
 
-  const viewableUrl = result.secure_url.replace(
-    '/raw/upload/',
-    '/raw/upload/fl_attachment:false/'
-  );
+  // ✅ Chọn resource_type phù hợp theo loại file
+  const resourceType = ['jpg', 'jpeg', 'png'].includes(ext) ? 'image' : 'raw';
 
-  return viewableUrl;
+  const result = await cloudinary.uploader.upload(filePath, {
+    resource_type: resourceType, // 'raw' cho PDF, DOC, DOCX
+    folder: 'cv-viet-huong',
+    use_filename: true,
+    unique_filename: true,
+    public_id: fileName.replace(/\.[^/.]+$/, ''), // bỏ đuôi file khỏi public_id
+  });
+
+  return result.secure_url;
 }
+
 function formatDateTime(isoString) {
   const d = new Date(isoString);
-  // Chuyển sang giờ Việt Nam (UTC+7)
   const vnDate = new Date(d.getTime() + 7 * 60 * 60 * 1000);
-  const year = vnDate.getUTCFullYear();
-  const month = String(vnDate.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(vnDate.getUTCDate()).padStart(2, '0');
-  const hours = String(vnDate.getUTCHours()).padStart(2, '0');
+  const year    = vnDate.getUTCFullYear();
+  const month   = String(vnDate.getUTCMonth() + 1).padStart(2, '0');
+  const day     = String(vnDate.getUTCDate()).padStart(2, '0');
+  const hours   = String(vnDate.getUTCHours()).padStart(2, '0');
   const minutes = String(vnDate.getUTCMinutes()).padStart(2, '0');
   const seconds = String(vnDate.getUTCSeconds()).padStart(2, '0');
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
@@ -59,10 +60,10 @@ async function appendToSheet(record) {
         record.id,
         record.fullName,
         record.email,
-         "'" + record.phone,
+        "'" + record.phone,
         record.position,
         record.experience || '',
-        record.address   || '',
+        record.address    || '',
         record.cvFileName || 'Không có',
         formatDateTime(record.receivedAt),
       ]],
