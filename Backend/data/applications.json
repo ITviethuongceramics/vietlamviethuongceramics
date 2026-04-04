@@ -219,5 +219,17 @@
     "cvFileName": "Không có",
     "receivedAt": "2026-04-04T06:21:38.500Z",
     "emailSent": true
+  },
+  {
+    "id": 1775284131620,
+    "fullName": "Nguyễn Văn A",
+    "email": "nhahome756@gmail.com",
+    "phone": "0901234567",
+    "position": "Nhân viên kinh doanh",
+    "experience": "1 - 2 năm",
+    "address": "Đà Nẵng",
+    "cvFileName": "Không có",
+    "receivedAt": "2026-04-04T06:28:51.620Z",
+    "emailSent": true
   }
 ]

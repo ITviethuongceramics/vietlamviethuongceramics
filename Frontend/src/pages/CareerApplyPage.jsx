@@ -235,7 +235,7 @@ export default function CareerApplyPage() {
             </svg>
           </div>
           <h2>Hồ sơ đã gửi thành công!</h2>
-          <p>Cảm ơn <strong>{form.fullName}</strong> đã ứng tuyển tại<br /><strong>Việt Hương Ceramics</strong></p>
+          <p>Cảm ơn <strong>{form.fullName}</strong> đã ứng tuyển tại<br /><strong>Viet Huong Ceramics</strong></p>
           <p className="sub">Email xác nhận đã gửi đến<br /><strong>{form.email}</strong></p>
           <p className="note">Chúng tôi sẽ liên hệ trong <strong>3–5 ngày làm việc</strong></p>
           <button className="btn-back" onClick={() => {

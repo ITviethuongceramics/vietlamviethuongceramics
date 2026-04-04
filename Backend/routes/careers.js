@@ -12,10 +12,19 @@ const defaultClient = SibApiV3Sdk.ApiClient.instance;
 defaultClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
 const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
-async function sendMail({ to, subject, html, attachments }) {
+async function sendMailToCandidate({ to, subject, html }) {
   const email = new SibApiV3Sdk.SendSmtpEmail();
-  email.sender      = { name: 'Việt Hương Ceramics', email: process.env.GMAIL_USER };
+  email.sender      = { name: 'Viet Huong Ceramics', email: process.env.GMAIL_USER };
   email.to          = [{ email: to }];
+  email.subject     = subject;
+  email.htmlContent = html;
+  return apiInstance.sendTransacEmail(email);
+}
+
+async function sendMailToHR({ subject, html, attachments }) {
+  const email = new SibApiV3Sdk.SendSmtpEmail();
+  email.sender      = { name: 'Việt Hương Ceramics', email: 'no-reply@viet-huong.brevo.com' };
+  email.to          = [{ email: process.env.HR_MAIL }];
   email.subject     = subject;
   email.htmlContent = html;
   if (attachments && attachments.length > 0) {
@@ -70,7 +79,9 @@ function saveRecord(record) {
     const list = fs.existsSync(logPath)
       ? JSON.parse(fs.readFileSync(logPath, 'utf8'))
       : [];
-    list.push(record);
+    const idx = list.findIndex(r => r.id === record.id);
+    if (idx >= 0) list[idx] = record;
+    else list.push(record);
     fs.writeFileSync(logPath, JSON.stringify(list, null, 2));
     return list;
   } catch (err) {
@@ -119,17 +130,7 @@ router.post('/apply', handleUpload, async (req, res) => {
     return res.status(400).json({ success: false, message: 'Vui long dien day du thong tin bat buoc.', errors });
   }
 
-  // ── Upload CV ────────────────────────────────────────────
-  let cvLink = null;
-  if (cvFile) {
-    try {
-      cvLink = await uploadCV(cvFile.path, cvFile.originalname);
-    } catch (err) {
-      console.error('[UPLOAD ERROR]', err.message);
-    }
-  }
-
-  // ── Lưu hồ sơ ───────────────────────────────────────────
+  // ✅ Lưu record & trả về thành công NGAY, không chờ upload hay mail
   const record = {
     id:         Date.now(),
     fullName:   _fullName,
@@ -138,34 +139,60 @@ router.post('/apply', handleUpload, async (req, res) => {
     position:   _position,
     experience: _experience || '',
     address:    _address    || '',
-    cvFileName: cvLink      || 'Không có',
+    cvFileName: 'Đang xử lý...',
     receivedAt: new Date().toISOString(),
   };
 
   saveRecord(record);
-  appendToSheet(record).catch(err => console.error('[SHEETS ERROR]', err.message));
-  res.json({ success: true });
+  res.json({ success: true }); // ← frontend nhận ngay lập tức
 
-  // ── Gửi email song song ──────────────────────────────────
-  Promise.all([
-    sendMail({
-      to:      _email,
-      subject: 'Xác nhận nhận hồ sơ ứng tuyển — Việt Hương Ceramics',
-      html:    candidateEmailHtml({ fullName: _fullName, position: _position, experience: _experience, phone: _phone, address: _address, cvFile }),
-    }).then(() => console.log('[EMAIL OK] Ứng viên:', _email))
-      .catch(err => console.error('[EMAIL LỖI] Ứng viên:', err.message)),
+  // ✅ Mọi thứ nặng chạy ngầm phía sau
+  (async () => {
+    try {
+      // Upload CV
+      let cvLink = null;
+      if (cvFile) {
+        try {
+          cvLink = await uploadCV(cvFile.path, cvFile.originalname);
+          record.cvFileName = cvLink;
+          saveRecord(record);
+        } catch (err) {
+          console.error('[UPLOAD ERROR]', err.message);
+          record.cvFileName = 'Lỗi upload';
+          saveRecord(record);
+        }
+      } else {
+        record.cvFileName = 'Không có';
+        saveRecord(record);
+      }
 
-    sendMail({
-      to:          process.env.HR_MAIL,
-      subject:     `[Ứng tuyển mới] ${_fullName} — ${_position}`,
-      html:        hrEmailHtml({ fullName: _fullName, email: _email, phone: _phone, position: _position, experience: _experience, address: _address, coverLetter: _coverLetter, cvFile }),
-      attachments: cvFile ? [{ filename: cvFile.originalname, path: cvFile.path }] : [],
-    }).then(() => console.log('[EMAIL OK] HR:', process.env.HR_MAIL))
-      .catch(err => console.error('[EMAIL LỖI] HR:', err.message)),
-  ]).then(() => {
-    markEmailSent(record);
-    if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch {} }
-  });
+      // Ghi Google Sheets
+      appendToSheet(record).catch(err => console.error('[SHEETS ERROR]', err.message));
+
+      // Gửi 2 mail song song
+      await Promise.all([
+        sendMailToCandidate({
+          to:      _email,
+          subject: 'Xác nhận nhận hồ sơ ứng tuyển — Việt Hương Ceramics',
+          html:    candidateEmailHtml({ fullName: _fullName, position: _position, experience: _experience, phone: _phone, address: _address, cvFile }),
+        }).then(() => console.log('[EMAIL OK] Ứng viên:', _email))
+          .catch(err => console.error('[EMAIL LỖI] Ứng viên:', err.message)),
+
+        sendMailToHR({
+          subject:     `[Ứng tuyển mới] ${_fullName} — ${_position}`,
+          html:        hrEmailHtml({ fullName: _fullName, email: _email, phone: _phone, position: _position, experience: _experience, address: _address, coverLetter: _coverLetter, cvFile }),
+          attachments: cvFile ? [{ filename: cvFile.originalname, path: cvFile.path }] : [],
+        }).then(() => console.log('[EMAIL OK] HR:', process.env.HR_MAIL))
+          .catch(err => console.error('[EMAIL LỖI] HR:', err.message)),
+      ]);
+
+      markEmailSent(record);
+      if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch {} }
+
+    } catch (err) {
+      console.error('[BACKGROUND ERROR]', err.message);
+    }
+  })();
 });
 
 module.exports = router;
