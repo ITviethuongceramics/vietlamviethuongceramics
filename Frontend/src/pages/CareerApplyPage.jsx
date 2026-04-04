@@ -258,7 +258,7 @@ export default function CareerApplyPage() {
       <div className="login-card apply-card">
         <div className="login-header">
           <img src={logo} alt="logo" className="logo" />
-          <h1>Ứng tuyển tại Việt Hương Ceramics</h1>
+          <h1>Ứng tuyển tại Viet Huong Ceramics</h1>
           <p>Điền thông tin để gửi hồ sơ của bạn</p>
         </div>
 
