@@ -30,9 +30,10 @@ const upload = multer({
   },
 });
 
-// ── Nodemailer ───────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
   pool: true,
   maxConnections: 3,
   auth: {
@@ -142,7 +143,6 @@ cvLink = await uploadCV(cvFile.path, cvFile.originalname);
     receivedAt:  new Date().toISOString(),
   };
 
-  // Ghi vào Google Sheets
   appendToSheet(record).catch(err => console.error('[SHEETS ERROR]', err.message));
 
   res.json({ success: true });
@@ -166,7 +166,6 @@ cvLink = await uploadCV(cvFile.path, cvFile.originalname);
   ])
 .then(() => {
   markEmailSent(record);
-  // Xóa file CV tạm sau khi email gửi xong
   if (cvFile) {
     try { fs.unlinkSync(cvFile.path); } catch {}
   }
