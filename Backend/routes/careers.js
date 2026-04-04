@@ -36,6 +36,7 @@ const transporter = nodemailer.createTransport({
   secure: true,
   pool: true,
   maxConnections: 3,
+  family: 4, // Force IPv4
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_PASS,
