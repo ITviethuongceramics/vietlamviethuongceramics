@@ -10,7 +10,8 @@ import viethuong6 from '../assets/viethuong6.jpg';
 import viethuong7 from '../assets/viethuong7.jpg';
 import viethuong8 from '../assets/viethuong8.jpg';
 import logo from '../assets/logo.jpg';
-
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 const POSITIONS = [
   'Nhân viên kinh doanh',
   'Nhân viên thiết kế',
@@ -21,6 +22,7 @@ const POSITIONS = [
   'Thực tập sinh',
   'Vị trí khác',
 ];
+
 
 const EXPERIENCES = [
   { value: 'Chưa có', label: 'Chưa có kinh nghiệm' },
@@ -143,6 +145,7 @@ export default function CareerApplyPage() {
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -223,10 +226,10 @@ export default function CareerApplyPage() {
 
   if (success) {
     return (
-      <div className="login-page">
+      <div className="apply-page">
         <TopLoader active={false} />
         <BgLayers />
-        <div className="login-card success-card">
+        <div className="apply-card success-card">
           <div className="success-glow" />
           <div className="success-icon-wrap">
             <svg viewBox="0 0 52 52" className="checkmark">
@@ -234,6 +237,7 @@ export default function CareerApplyPage() {
               <path className="checkmark-check" fill="none" d="M14 27l9 9 15-18" />
             </svg>
           </div>
+          
           <h2>Hồ sơ đã gửi thành công!</h2>
           <p>Cảm ơn <strong>{form.fullName}</strong> đã ứng tuyển tại<br /><strong>Viet Huong Ceramics</strong></p>
           <p className="sub">Email xác nhận đã gửi đến<br /><strong>{form.email}</strong></p>
@@ -251,18 +255,30 @@ export default function CareerApplyPage() {
   }
 
   return (
-    <div className="login-page">
+    <div className="apply-page">
       <TopLoader active={loading} />
       <BgLayers />
 
-      <div className="login-card apply-card">
-        <div className="login-header">
+      <div className="apply-card">
+
+  <div className="top-bar">
+    <button
+      type="button"
+      className="back-home-btn"
+      onClick={() => navigate('/')}
+    >
+      <ArrowLeft size={18} />
+      Trang chủ
+    </button>
+  </div>
+
+  <div className="apply-header">
           <img src={logo} alt="logo" className="logo" />
           <h1>Ứng tuyển tại Viet Huong Ceramics</h1>
           <p>Điền thông tin để gửi hồ sơ của bạn</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="login-form" noValidate>
+        <form onSubmit={handleSubmit} className="apply-form" noValidate>
 
           <div className="form-row">
             <div className="form-col">
@@ -360,7 +376,7 @@ export default function CareerApplyPage() {
 
 function BgLayers() {
   return (
-    <div className="login-bg">
+    <div className="apply-bg">
       <div className="bg-layer layer-back">
         <div className="img-wrap tall"><img src={viethuong1} /></div>
         <div className="img-wrap normal"><img src={viethuong2} /></div>

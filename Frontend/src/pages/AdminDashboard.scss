@@ -1,0 +1,712 @@
+// ── VARIABLES ────────────────────────────────────────────
+$red:        #c0392b;
+$red-dark:   #96211a;
+$red-soft:   rgba(192, 57, 43, 0.08);
+$blue:       #2980b9;
+$blue-soft:  rgba(41, 128, 185, 0.1);
+$green:      #27ae60;
+$green-soft: rgba(39, 174, 96, 0.1);
+$orange:     #e67e22;
+$orange-soft:rgba(230, 126, 34, 0.1);
+$sidebar-bg: #292323;
+$sidebar-w:  230px;
+$white:      #ffffff;
+$gray:       #6b7280;
+$gray-light: #f3f4f6;
+$border:     #e5e7eb;
+$text:       #111827;
+$text-sub:   #6b7280;
+
+// ── KEYFRAMES ────────────────────────────────────────────
+@keyframes spin    { to { transform: rotate(360deg); } }
+@keyframes fadeIn  { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes modalIn { from { opacity: 0; transform: scale(0.94) translateY(16px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+// ── LAYOUT ───────────────────────────────────────────────
+.adm {
+  display: flex;
+  min-height: 100vh;
+  font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+  background: $gray-light;
+  color: $text;
+}
+
+// ── SIDEBAR ───────────────────────────────────────────────
+.adm-sidebar {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: $sidebar-w;
+  background: $sidebar-bg;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 24px;
+  z-index: 100;
+  box-shadow: 4px 0 24px rgba(0,0,0,0.18);
+
+  &__logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 12px;
+  }
+
+  &__logo-mark {
+    width: 38px;
+    height: 38px;
+    background: $red;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba($red, 0.4);
+
+    span {
+      font-family: 'Playfair Display', serif;
+      font-size: 14px;
+      font-weight: 900;
+      color: $white;
+      letter-spacing: 0.5px;
+    }
+  }
+
+  &__logo-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+
+    strong {
+      font-size: 14px;
+      font-weight: 800;
+      color: $white;
+    }
+
+    span {
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+  }
+
+  &__nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0 12px;
+  }
+
+  &__logout {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 12px;
+    padding: 11px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: transparent;
+    color: rgba(255,255,255,0.4);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.7);
+    }
+  }
+}
+
+.adm-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.45);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.22s;
+  text-align: left;
+  width: 100%;
+
+  svg { flex-shrink: 0; }
+
+  &:hover {
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.8);
+  }
+
+  &--active {
+    background: $red;
+    color: $white;
+    box-shadow: 0 4px 14px rgba($red, 0.35);
+
+    &:hover { background: $red-dark; color: $white; }
+  }
+}
+
+// ── MAIN ──────────────────────────────────────────────────
+.adm-main {
+  margin-left: $sidebar-w;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+// ── TOPBAR ────────────────────────────────────────────────
+.adm-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: $white;
+  border-bottom: 1px solid $border;
+  padding: 0 32px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.04);
+
+  &__title {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: $text;
+  }
+}
+
+// ── CONTENT ───────────────────────────────────────────────
+.adm-content {
+  flex: 1;
+  padding: 28px 32px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeIn 0.4s ease both;
+}
+
+// ── FORM CARD ─────────────────────────────────────────────
+.adm-form-card {
+  background: $white;
+  border-radius: 16px;
+  border: 1px solid $border;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  animation: fadeIn 0.35s ease both;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid $border;
+    background: #fafafa;
+
+    h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: $red;
+      margin: 0;
+    }
+  }
+}
+
+.adm-form {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+
+  &__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+
+    @media (max-width: 768px) { grid-template-columns: 1fr; }
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid $border;
+    margin-top: 8px;
+  }
+}
+
+// ── FIELD ─────────────────────────────────────────────────
+.adm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+
+  &--full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 12px;
+    font-weight: 700;
+    color: $text;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+
+    span { color: $red; margin-left: 2px; }
+  }
+
+  input, textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid $border;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    color: $text;
+    background: $white;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+    resize: vertical;
+
+    &::placeholder { color: #c4c4c4; }
+
+    &:focus {
+      border-color: $red;
+      box-shadow: 0 0 0 3px rgba($red, 0.1);
+    }
+  }
+}
+
+// ── SELECT WRAP ───────────────────────────────────────────
+.adm-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  select {
+    width: 100%;
+    padding: 10px 36px 10px 14px;
+    border: 1.5px solid $border;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    color: $text;
+    background: $white;
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+
+    &:focus {
+      border-color: $red;
+      box-shadow: 0 0 0 3px rgba($red, 0.1);
+    }
+  }
+
+  svg {
+    position: absolute;
+    right: 12px;
+    color: $gray;
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+
+  &--sm select { padding: 9px 32px 9px 12px; font-size: 13px; }
+}
+
+// ── TABLE ─────────────────────────────────────────────────
+.adm-table-wrap {
+  background: $white;
+  border-radius: 16px;
+  border: 1px solid $border;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+}
+
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  thead tr {
+    background: #fafafa;
+    border-bottom: 1.5px solid $border;
+  }
+
+  th {
+    padding: 13px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: $text-sub;
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid $border;
+    transition: background 0.15s;
+
+    &:last-child { border-bottom: none; }
+    &:hover { background: #fafafa; }
+  }
+
+  td {
+    padding: 14px 16px;
+    color: $text;
+    vertical-align: middle;
+  }
+
+  &__title {
+    font-weight: 600;
+    color: $text;
+  }
+
+  &__empty {
+    text-align: center;
+    padding: 56px !important;
+    color: $text-sub;
+    font-size: 14px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+}
+
+// ── META ──────────────────────────────────────────────────
+.adm-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: $text-sub;
+  font-size: 13px;
+
+  svg { color: #d1d5db; flex-shrink: 0; }
+}
+
+// ── BADGES ───────────────────────────────────────────────
+.adm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: 100px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+
+  &--active   { background: $green-soft;  color: $green;  }
+  &--inactive { background: $red-soft;    color: $red;    }
+  &--pending  { background: $orange-soft; color: $orange; }
+  &--passed   { background: $green-soft;  color: $green;  }
+  &--failed   { background: $red-soft;    color: $red;    }
+}
+
+// ── BUTTONS ───────────────────────────────────────────────
+.adm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  text-decoration: none;
+
+  &--primary {
+    background: $red;
+    color: $white;
+    box-shadow: 0 2px 10px rgba($red, 0.3);
+    &:hover { background: $red-dark; box-shadow: 0 4px 16px rgba($red, 0.4); transform: translateY(-1px); }
+  }
+
+  &--ghost {
+    background: $white;
+    color: $text;
+    border: 1.5px solid $border;
+    &:hover { border-color: #ccc; background: $gray-light; }
+  }
+
+  &--blue {
+    background: $blue;
+    color: $white;
+    box-shadow: 0 2px 8px rgba($blue, 0.25);
+    &:hover { background: darken($blue, 8%); }
+  }
+
+  &--sm { padding: 8px 16px; font-size: 13px; }
+}
+
+.adm-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1.5px solid $border;
+  background: $white;
+  color: $gray;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover { border-color: #ccc; background: $gray-light; color: $text; }
+
+  &--blue {
+    border-color: rgba($blue, 0.3);
+    color: $blue;
+    background: $blue-soft;
+    &:hover { background: rgba($blue, 0.18); border-color: $blue; }
+  }
+
+  &--red {
+    border-color: rgba($red, 0.25);
+    color: $red;
+    background: $red-soft;
+    &:hover { background: rgba($red, 0.15); border-color: $red; }
+  }
+}
+
+// ── FILTER BAR ────────────────────────────────────────────
+.adm-filter-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+
+  &__input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: $white;
+    border: 1.5px solid $border;
+    border-radius: 10px;
+    padding: 0 14px;
+    flex: 1;
+    min-width: 200px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+
+    &:focus-within {
+      border-color: $red;
+      box-shadow: 0 0 0 3px rgba($red, 0.1);
+    }
+
+    svg { color: $gray; flex-shrink: 0; }
+
+    input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-family: inherit;
+      font-size: 14px;
+      color: $text;
+      padding: 10px 0;
+      background: transparent;
+
+      &::placeholder { color: #c4c4c4; }
+    }
+  }
+}
+
+// ── MODAL ─────────────────────────────────────────────────
+.adm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.adm-modal {
+  background: $white;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+  animation: modalIn 0.3s cubic-bezier(0.22,1,0.36,1) both;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid $border;
+
+    h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: $red;
+      margin: 0;
+    }
+  }
+
+  &__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  &__info-grid {
+    background: $gray-light;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  &__info-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid $border;
+
+    &:last-child { border-bottom: none; }
+  }
+
+  &__info-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: $text-sub;
+    width: 120px;
+    flex-shrink: 0;
+  }
+
+  &__info-value {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: $text;
+    font-weight: 500;
+
+    svg { color: $gray; flex-shrink: 0; }
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid $border;
+    background: #fafafa;
+    border-radius: 0 0 18px 18px;
+  }
+}
+
+// ── MISC ──────────────────────────────────────────────────
+.adm-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 48px;
+  color: $text-sub;
+  font-size: 14px;
+}
+
+.adm-spinner {
+  width: 28px; height: 28px;
+  border: 2.5px solid $border;
+  border-top-color: $red;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.adm-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: $blue;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s;
+
+  &:hover { color: darken($blue, 12%); text-decoration: underline; }
+}
+
+.adm-muted {
+  color: #d1d5db;
+  font-size: 13px;
+}
+
+// ── RESPONSIVE ───────────────────────────────────────────
+@media (max-width: 768px) {
+  .adm-sidebar {
+    width: 64px;
+
+    &__logo-text,
+    &__logout span { display: none; }
+
+    &__logo { justify-content: center; padding: 20px 12px; }
+    &__logout { justify-content: center; }
+  }
+
+  .adm-nav-item span { display: none; }
+  .adm-nav-item { justify-content: center; padding: 12px; }
+
+  .adm-main { margin-left: 64px; }
+  .adm-content { padding: 20px 16px; }
+  .adm-topbar { padding: 0 16px; }
+}
+.adm-sidebar__logo {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &-img {
+    width: 160px;
+    height: auto;
+    object-fit: contain;
+    display: block;
+
+    // thu nhỏ khi sidebar collapse mobile
+    @media (max-width: 768px) {
+      width: 36px;
+      height: 36px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+  }
+}

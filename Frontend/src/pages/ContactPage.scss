@@ -1,0 +1,403 @@
+.cp {
+  min-height: 100vh;
+  background: #f7f4f2;
+}
+
+// ── HERO ───────────────────────────────────────────────
+.cp-hero {
+  position: relative;
+  padding: 100px 24px 110px;
+  text-align: center;
+  overflow: hidden;
+
+  &__bg {
+    position: absolute;
+    inset: -20% 0 -20% 0;
+    background: url('https://res.cloudinary.com/dq8cmcln9/image/upload/v1775457142/cua-hang-gach-op-lat_ydeubn.jpg') center/cover no-repeat;
+    will-change: transform;
+    z-index: 0;
+  }
+
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(80, 10, 5, 0.82) 0%,
+      rgba(192, 57, 43, 0.60) 50%,
+      rgba(30, 5, 5, 0.88) 100%
+    );
+    z-index: 1;
+  }
+
+  &__inner {
+    position: relative;
+    z-index: 2;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  &__eyebrow {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: 16px;
+  }
+
+  &__title {
+    font-size: clamp(2.2rem, 5vw, 3.2rem);
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 18px;
+    line-height: 1.12;
+    letter-spacing: -1px;
+
+    em {
+      font-style: italic;
+      color: #f0a899;
+    }
+  }
+
+  &__sub {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.68);
+    margin: 0;
+    line-height: 1.75;
+  }
+
+  &__wave {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    line-height: 0;
+
+    svg { display: block; width: 100%; height: 60px; }
+  }
+}
+
+// ── BODY ───────────────────────────────────────────────
+.cp-body {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 28px;
+  align-items: start;
+
+  @media (max-width: 860px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ── SIDEBAR ────────────────────────────────────────────
+.cp-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2px;
+  }
+
+  &__count {
+    font-size: 11px;
+    font-weight: 700;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+  }
+
+  &__reset {
+    font-size: 12px;
+    color: #C0392B;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-weight: 600;
+
+    &:hover { text-decoration: underline; }
+  }
+}
+
+// ── CARDS ──────────────────────────────────────────────
+.cp-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cp-card {
+  background: #fff;
+  border: 1.5px solid #ede8e4;
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.22s, transform 0.18s;
+
+  &:hover {
+    border-color: #C0392B;
+    box-shadow: 0 6px 28px rgba(192, 57, 43, 0.11);
+    transform: translateY(-2px);
+
+    .cp-card__thumb img { transform: scale(1.06); }
+    .cp-card__cta { color: #C0392B; }
+  }
+
+  &--active {
+    border-color: #C0392B;
+    box-shadow: 0 6px 32px rgba(192, 57, 43, 0.16);
+    transform: translateY(-2px);
+
+    .cp-card__name { color: #C0392B; }
+    .cp-card__cta { color: #C0392B; }
+
+    .cp-card__thumb-index {
+      background: #C0392B;
+      color: #fff;
+    }
+  }
+
+  &__thumb {
+    position: relative;
+    width: 100%;
+    height: 150px;
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.45s ease;
+    }
+  }
+
+  &__thumb-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.38) 0%, transparent 60%);
+  }
+
+  &__thumb-index {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #2c1a0e;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.5px;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  &__content {
+    padding: 14px 16px 12px;
+  }
+
+  &__name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #2c1a0e;
+    margin: 0 0 10px;
+    transition: color 0.2s;
+  }
+
+  &__row {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    font-size: 12px;
+    color: #777;
+    margin-bottom: 6px;
+    line-height: 1.5;
+
+    &:last-of-type { margin-bottom: 0; }
+  }
+
+  &__icon {
+    color: #C0392B;
+    flex-shrink: 0;
+    margin-top: 1px;
+    opacity: 0.8;
+  }
+
+  &__footer {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f0ebe7;
+  }
+
+  &__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ccc;
+    transition: color 0.2s;
+  }
+}
+
+// ── CONTACT BOX ────────────────────────────────────────
+.cp-contact-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fff7f6;
+  border: 1.5px solid #f5dbd8;
+  border-radius: 12px;
+  padding: 16px 18px;
+
+  &__icon {
+    color: #C0392B;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  &__label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #C0392B;
+    margin: 0 0 4px;
+  }
+
+  &__value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #2c1a0e;
+    margin: 0 0 2px;
+  }
+
+  &__email {
+    font-size: 12px;
+    color: #999;
+    margin: 0;
+  }
+}
+
+// ── MAP ────────────────────────────────────────────────
+.cp-map-wrap {
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1.5px solid #ede8e4;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 24px;
+}
+
+.cp-map {
+  width: 100%;
+  height: 580px;
+
+  @media (max-width: 860px) { height: 380px; }
+}
+
+// ── MARKER ─────────────────────────────────────────────
+.cp-marker {
+  position: relative;
+  width: 32px;
+  height: 32px;
+
+  &__dot {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 14px;
+    background: #C0392B;
+    border-radius: 50%;
+    border: 2.5px solid #fff;
+    box-shadow: 0 2px 8px rgba(192, 57, 43, 0.5);
+    z-index: 2;
+  }
+
+  &__pulse {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(192, 57, 43, 0.18);
+    animation: cp-pulse 2.2s ease-out infinite;
+  }
+}
+
+@keyframes cp-pulse {
+  0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
+}
+
+// ── POPUP ──────────────────────────────────────────────
+.cp-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 6px;
+
+  strong {
+    font-size: 13px;
+    font-weight: 700;
+    color: #2c1a0e;
+  }
+
+  span {
+    font-size: 11.5px;
+    color: #888;
+    line-height: 1.5;
+  }
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+  border: 1px solid #ede8e4 !important;
+  padding: 4px 0 !important;
+}
+
+.leaflet-popup-content { margin: 8px 14px !important; }
+.leaflet-popup-tip-container { margin-top: -1px; }
+.cp-contact-extra {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.cp-1__value {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 999px;
+
+  font-size: 13px;
+  font-weight: 500;
+
+  background: linear-gradient(135deg, #f2583d, #70181871);
+  color: #fff;
+
+  box-shadow: 0 4px 12px rgba(207, 38, 38, 0.3);
+  transition: all 0.25s ease;
+}
+
+/* hover nhẹ */
+.cp-1__value:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(223, 57, 32, 0.4);
+}

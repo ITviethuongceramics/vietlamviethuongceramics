@@ -1,0 +1,555 @@
+// ── VARIABLES ────────────────────────────────────────────
+$red:        #c0392b;
+$red-dark:   #96211a;
+$red-glow:   rgba(192, 57, 43, 0.13);
+$blue:       #2980b9;
+$green:      #27ae60;
+$white:      #ffffff;
+$cream:      #f7f4f2;
+$gray:       #6b7280;
+$gray-light: #f3f4f6;
+$border:     #e5e7eb;
+$text:       #111827;
+$text-sub:   #6b7280;
+
+// ── KEYFRAMES ────────────────────────────────────────────
+@keyframes heroIn {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+@keyframes waveFloat {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+// ── REVEAL ───────────────────────────────────────────────
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(32px);
+  transition:
+    opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--delay, 0s);
+
+  &.is-visible { opacity: 1; transform: translateY(0); }
+}
+
+// ── PAGE ─────────────────────────────────────────────────
+.jdp {
+  font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+  background: $cream;
+  min-height: 100vh;
+  color: $text;
+}
+
+// ── HERO ─────────────────────────────────────────────────
+.jdp-hero {
+  position: relative;
+  min-height: 340px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(10,5,5,0.88) 0%, rgba(140,30,20,0.65) 55%, rgba(10,5,5,0.85) 100%),
+    url('https://images.unsplash.com/photo-1497366216548-37526070297c?w=1600&q=80') center/cover no-repeat;
+
+  // grid lines texture
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      rgba(255,255,255,0.018) 0px,
+      rgba(255,255,255,0.018) 1px,
+      transparent 1px,
+      transparent 64px
+    );
+    pointer-events: none;
+  }
+
+  &__overlay { position: absolute; inset: 0; pointer-events: none; }
+
+  &__content {
+    position: relative;
+    z-index: 2;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 56px 32px 80px;
+    width: 100%;
+  }
+
+  &__back {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: rgba(255,255,255,0.55);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    margin-bottom: 20px;
+    transition: color 0.2s;
+    animation: heroIn 0.7s 0.05s both;
+
+    &:hover { color: rgba(255,255,255,0.9); }
+  }
+
+  &__company {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 14px;
+    animation: heroIn 0.7s 0.15s both;
+
+    svg { flex-shrink: 0; }
+  }
+
+  &__title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 900;
+    line-height: 1.15;
+    margin: 0 0 24px;
+    background: linear-gradient(90deg, #fff 30%, rgba(255,120,100,0.95) 50%, #fff 70%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: heroIn 0.7s 0.25s both, shimmer 5s 1s linear infinite;
+  }
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    animation: heroIn 0.7s 0.4s both;
+  }
+
+  &__wave {
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    z-index: 3;
+    line-height: 0;
+    animation: waveFloat 6s ease-in-out infinite;
+
+    svg { width: 100%; height: 60px; display: block; }
+  }
+}
+
+// ── TAGS ─────────────────────────────────────────────────
+.jdp-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.88);
+  border: 1px solid rgba(255,255,255,0.18);
+  backdrop-filter: blur(4px);
+
+  svg { flex-shrink: 0; }
+
+  &--green {
+    background: rgba(39,174,96,0.2);
+    color: #6ee7a0;
+    border-color: rgba(39,174,96,0.3);
+  }
+}
+
+// ── BODY ─────────────────────────────────────────────────
+.jdp-body {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 32px 80px;
+
+  @media (max-width: 768px) { padding: 28px 16px 60px; }
+}
+
+// ── LAYOUT ───────────────────────────────────────────────
+.jdp-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 28px;
+  align-items: start;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ── MAIN ─────────────────────────────────────────────────
+.jdp-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+// ── SECTION ──────────────────────────────────────────────
+.jdp-section {
+  background: $white;
+  border-radius: 18px;
+  border: 1.5px solid $border;
+  padding: 28px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  transition: box-shadow 0.3s ease;
+
+  &:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1.5px solid $border;
+  }
+
+  &__icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  &__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    li {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 15px;
+      line-height: 1.75;
+      color: $gray;
+
+      &::before {
+        content: '';
+        display: block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        margin-top: 9px;
+        flex-shrink: 0;
+        opacity: 0.5;
+      }
+    }
+  }
+}
+
+// ── APPLY ─────────────────────────────────────────────────
+.jdp-apply {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  background: $white;
+  border-radius: 18px;
+  border: 1.5px solid $border;
+  padding: 24px 28px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: $red;
+    color: $white;
+    padding: 14px 32px;
+    border-radius: 100px;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    box-shadow: 0 4px 20px $red-glow;
+    transition: background 0.25s, transform 0.25s, box-shadow 0.25s;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+      transition: left 0.5s;
+    }
+
+    &:hover {
+      background: $red-dark;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba($red, 0.35);
+      &::before { left: 140%; }
+    }
+
+    svg { transition: transform 0.25s; }
+    &:hover svg { transform: translateX(3px); }
+  }
+
+  &__deadline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: $gray;
+
+    svg { color: #bbb; }
+
+    strong { color: $text; font-weight: 700; }
+
+    &.urgent {
+      color: #e67e22;
+      strong { color: #e67e22; }
+      animation: pulse 2s ease-in-out infinite;
+    }
+  }
+}
+
+// ── SIDEBAR ───────────────────────────────────────────────
+.jdp-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 80px;
+}
+
+// ── INFO CARD ─────────────────────────────────────────────
+.jdp-info-card {
+  background: $white;
+  border-radius: 18px;
+  border: 1.5px solid $border;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+
+  &__title {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: $red;
+    margin: 0 0 18px;
+    padding-bottom: 12px;
+    border-bottom: 1.5px solid $border;
+  }
+
+  &--detail &__title { color: $blue; }
+}
+
+.jdp-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.jdp-info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid $border;
+
+  &:last-child { border-bottom: none; }
+
+  &__icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: $gray-light;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: $gray;
+    margin-top: 1px;
+  }
+
+  &__label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: $text-sub;
+    margin-bottom: 2px;
+  }
+
+  &__value {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: $text;
+  }
+}
+
+.jdp-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid $border;
+  gap: 12px;
+
+  &:last-child { border-bottom: none; }
+
+  &__label {
+    font-size: 12px;
+    color: $text-sub;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  &__value {
+    font-size: 13px;
+    font-weight: 700;
+    color: $text;
+    text-align: right;
+  }
+}
+
+// ── COMPANY CARD ──────────────────────────────────────────
+.jdp-company-card {
+  background: linear-gradient(135deg, #0f0c0c, #1e0e0e);
+  border-radius: 18px;
+  padding: 24px;
+  color: $white;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: rgba($red, 0.15);
+    pointer-events: none;
+  }
+
+  &__icon {
+    color: $red;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 1;
+  }
+
+  h4 {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: $white;
+    margin: 0 0 10px;
+    position: relative;
+    z-index: 1;
+  }
+
+  p {
+    font-size: 13px;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.55);
+    margin: 0 0 16px;
+    position: relative;
+    z-index: 1;
+  }
+
+  &__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 700;
+    color: $red;
+    text-decoration: none;
+    position: relative;
+    z-index: 1;
+    transition: gap 0.2s;
+
+    &:hover { gap: 8px; }
+  }
+}
+
+// ── STATES ───────────────────────────────────────────────
+.jdp-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 60vh;
+  font-family: 'Be Vietnam Pro', sans-serif;
+  font-size: 15px;
+  color: $gray;
+
+  svg { color: #ddd; }
+
+  p { font-size: 18px; font-weight: 600; color: $text; margin: 0; }
+
+  &--empty svg { color: #e5e7eb; }
+}
+
+.jdp-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid $border;
+  border-top-color: $red;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+.jdp-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: $red;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1.5px solid rgba($red, 0.3);
+  padding: 9px 20px;
+  border-radius: 100px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $red;
+    color: $white;
+    border-color: $red;
+  }
+}

@@ -3,9 +3,23 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const jwt = require('jsonwebtoken');
 const SibApiV3Sdk = require('@getbrevo/brevo');
 const { candidateEmailHtml, hrEmailHtml } = require('./email_templates');
 const { uploadCV, appendToSheet } = require('../services/google');
+const pool = require('../data/db');
+
+// ── Auth ─────────────────────────────────────────────────────
+function authMiddleware(req, res, next) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET || 'secret123');
+    next();
+  } catch {
+    res.status(401).json({ message: 'Token không hợp lệ' });
+  }
+}
 
 // ── Brevo API ────────────────────────────────────────────────
 const defaultClient = SibApiV3Sdk.ApiClient.instance;
@@ -14,7 +28,7 @@ const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
 async function sendMailToCandidate({ to, subject, html }) {
   const email = new SibApiV3Sdk.SendSmtpEmail();
-  email.sender      = { name: 'Viet Huong Ceramics', email: process.env.GMAIL_USER };
+  email.sender      = { name: 'Việt Hương Ceramics', email: process.env.GMAIL_USER };
   email.to          = [{ email: to }];
   email.subject     = subject;
   email.htmlContent = html;
@@ -23,15 +37,17 @@ async function sendMailToCandidate({ to, subject, html }) {
 
 async function sendMailToHR({ subject, html, attachments }) {
   const email = new SibApiV3Sdk.SendSmtpEmail();
-  email.sender      = { name: 'Việt Hương Ceramics', email: 'no-reply@viet-huong.brevo.com' };
+  email.sender = { name: 'Việt Hương Ceramics', email: process.env.GMAIL_USER };
   email.to          = [{ email: process.env.HR_MAIL }];
   email.subject     = subject;
   email.htmlContent = html;
   if (attachments && attachments.length > 0) {
-    email.attachment = attachments.map(a => ({
-      name: a.filename,
-      content: fs.readFileSync(a.path).toString('base64'),
-    }));
+    email.attachment = attachments
+      .filter(a => fs.existsSync(a.path))
+      .map(a => ({
+        name: a.filename,
+        content: fs.readFileSync(a.path).toString('base64'),
+      }));
   }
   return apiInstance.sendTransacEmail(email);
 }
@@ -70,38 +86,6 @@ const handleUpload = (req, res, next) => {
   }
 };
 
-// ── Logging ──────────────────────────────────────────────────
-function saveRecord(record) {
-  try {
-    const logDir  = path.join(__dirname, '..', 'data');
-    const logPath = path.join(logDir, 'applications.json');
-    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
-    const list = fs.existsSync(logPath)
-      ? JSON.parse(fs.readFileSync(logPath, 'utf8'))
-      : [];
-    const idx = list.findIndex(r => r.id === record.id);
-    if (idx >= 0) list[idx] = record;
-    else list.push(record);
-    fs.writeFileSync(logPath, JSON.stringify(list, null, 2));
-    return list;
-  } catch (err) {
-    console.error('[LOG ERROR]', err.message);
-    return null;
-  }
-}
-
-function markEmailSent(record) {
-  try {
-    const logPath = path.join(__dirname, '..', 'data', 'applications.json');
-    const list = JSON.parse(fs.readFileSync(logPath, 'utf8'));
-    const found = list.find(r => r.id === record.id);
-    if (found) found.emailSent = true;
-    fs.writeFileSync(logPath, JSON.stringify(list, null, 2));
-  } catch (err) {
-    console.error('[LOG UPDATE ERROR]', err.message);
-  }
-}
-
 // ── POST /api/careers/apply ──────────────────────────────────
 router.post('/apply', handleUpload, async (req, res) => {
   const { fullName, email, phone, position, experience, address, coverLetter } = req.body;
@@ -130,46 +114,47 @@ router.post('/apply', handleUpload, async (req, res) => {
     return res.status(400).json({ success: false, message: 'Vui long dien day du thong tin bat buoc.', errors });
   }
 
-  // ✅ Lưu record & trả về thành công NGAY, không chờ upload hay mail
-  const record = {
-    id:         Date.now(),
-    fullName:   _fullName,
-    email:      _email,
-    phone:      _phone,
-    position:   _position,
-    experience: _experience || '',
-    address:    _address    || '',
-    cvFileName: 'Đang xử lý...',
-    receivedAt: new Date().toISOString(),
-  };
+  const id = Date.now();
 
-  saveRecord(record);
-  res.json({ success: true }); // ← frontend nhận ngay lập tức
+  // ✅ Lưu vào MySQL NGAY với cv_link = null
+  try {
+    await pool.query(
+      `INSERT INTO applications 
+        (id, full_name, email, phone, position, experience, address, cover_letter, cv_link, email_sent, received_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, null, 0, NOW())`,
+      [id, _fullName, _email, _phone, _position, _experience || '', _address || '', _coverLetter || '']
+    );
+  } catch (err) {
+    console.error('[DB ERROR]', err.message);
+    return res.status(500).json({ success: false, message: 'Lỗi lưu dữ liệu.' });
+  }
 
-  // ✅ Mọi thứ nặng chạy ngầm phía sau
+  // ✅ Trả về thành công NGAY
+  res.json({ success: true });
+
+  // ✅ Chạy ngầm phía sau
   (async () => {
     try {
-      // Upload CV
+      // 1. Upload CV
       let cvLink = null;
       if (cvFile) {
         try {
           cvLink = await uploadCV(cvFile.path, cvFile.originalname);
-          record.cvFileName = cvLink;
-          saveRecord(record);
+          await pool.query('UPDATE applications SET cv_link = ? WHERE id = ?', [cvLink, id]);
         } catch (err) {
           console.error('[UPLOAD ERROR]', err.message);
-          record.cvFileName = 'Lỗi upload';
-          saveRecord(record);
         }
-      } else {
-        record.cvFileName = 'Không có';
-        saveRecord(record);
       }
 
-      // Ghi Google Sheets
-      appendToSheet(record).catch(err => console.error('[SHEETS ERROR]', err.message));
+      // 2. Ghi Google Sheets
+      appendToSheet({
+        id, fullName: _fullName, email: _email, phone: _phone,
+        position: _position, experience: _experience || '',
+        address: _address || '', cvFileName: cvLink || 'Không có',
+        receivedAt: new Date().toISOString(),
+      }).catch(err => console.error('[SHEETS ERROR]', err.message));
 
-      // Gửi 2 mail song song
+      // 3. Gửi 2 mail song song
       await Promise.all([
         sendMailToCandidate({
           to:      _email,
@@ -186,7 +171,10 @@ router.post('/apply', handleUpload, async (req, res) => {
           .catch(err => console.error('[EMAIL LỖI] HR:', err.message)),
       ]);
 
-      markEmailSent(record);
+      // 4. Đánh dấu email đã gửi
+      await pool.query('UPDATE applications SET email_sent = 1 WHERE id = ?', [id]);
+
+      // 5. Xóa file sau khi gửi mail xong
       if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch {} }
 
     } catch (err) {

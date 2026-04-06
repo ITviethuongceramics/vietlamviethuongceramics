@@ -1,0 +1,173 @@
+.footer {
+  margin-top: 80px;
+}
+
+/* 🔴 TOP */
+.footer-top {
+  background: #941b1b;
+  color: white;
+  text-align: center;
+  padding: 60px 20px;
+
+  h2 {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 16px;
+  }
+
+  p {
+    max-width: 700px;
+    margin: 0 auto 40px;
+    line-height: 1.6;
+  }
+}
+
+/* 👑 CHAIRMAN */
+.chairman {
+  display: flex;
+  align-items: center;
+  gap: 60px;
+  padding: 60px 10%;
+  background: #fff;
+  border-radius: 20px;
+
+  &-img img {
+    width: 100%;
+    max-width: 350px;
+    height: 450px;
+    object-fit: cover;
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+    transition: 0.4s;
+  }
+
+  &-img img:hover {
+    transform: scale(1.05);
+  }
+
+  &-content {
+    flex: 1;
+
+    h2 {
+      font-size: 28px;
+      color: #b22222;
+      margin-bottom: 16px;
+    }
+
+    p {
+      color: #444;
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+
+    ul {
+      padding-left: 18px;
+
+      li {
+        margin-bottom: 6px;
+      }
+    }
+  }
+}
+
+/* 📍 BRANCHES */
+.branches-section {
+  padding: 60px 40px;
+  background: #f9f9f9;
+
+  h2 {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+}
+
+.branches-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.branch-card {
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: 0.3s;
+  border: 1px solid #eee;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  }
+
+  .info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .call-btn {
+    background: #0d6efd;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 8px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+
+    &:hover {
+      background: #084298;
+    }
+  }
+}
+
+/* 🔳 BOTTOM */
+.footer-bottom {
+  padding: 40px 20px;
+  background: #e2d1d1;
+
+  img {
+    width: 200px;
+    margin-bottom: 20px;
+  }
+
+ .company {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  img {
+    width: 200px;
+    height: auto;
+  }
+
+  .company-info {
+    p {
+      margin: 3px 0;
+      color: #741919;
+    }
+  }
+}
+}
+
+/* 📱 MOBILE */
+@media (max-width: 768px) {
+  .chairman {
+    flex-direction: column;
+  }
+
+  .branches-list {
+    grid-template-columns: 1fr;
+  }
+
+  .branch-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+ 
+}
