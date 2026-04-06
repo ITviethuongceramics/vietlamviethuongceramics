@@ -58,7 +58,7 @@ async function initDB() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    await pool.query(`CREATE TABLE IF NOT EXISTS applications (
+await pool.query(`CREATE TABLE IF NOT EXISTS applications (
       id BIGINT PRIMARY KEY,
       full_name VARCHAR(255),
       email VARCHAR(255),
@@ -74,7 +74,13 @@ async function initDB() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    // THÊM ĐOẠN NÀY
+    try {
+      await pool.query('ALTER TABLE applications ADD COLUMN email_sent TINYINT(1) DEFAULT 0');
+    } catch (e) { /* column đã tồn tại */ }
+
     const [rows] = await pool.query('SELECT * FROM admins WHERE username = ?', ['admin']);
+    
     if (!rows.length) {
       const hash = await bcrypt.hash('admin123', 10);
       await pool.query('INSERT INTO admins (username, password) VALUES (?, ?)', ['admin', hash]);
