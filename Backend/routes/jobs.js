@@ -19,7 +19,7 @@ function authMiddleware(req, res, next) {
 router.get('/', async (req, res) => {
   try {
     const { search, location, type, experience } = req.query;
-    let query = 'SELECT * FROM jobs WHERE status = "active"';
+    let query = "SELECT * FROM jobs WHERE status = 'active'";
     const params = [];
     if (search) { query += ' AND title LIKE ?'; params.push(`%${search}%`); }
     if (location) { query += ' AND location = ?'; params.push(location); }
@@ -33,7 +33,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/jobs/:id — Chi tiết việc làm
 router.get('/:id', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM jobs WHERE id = ?', [req.params.id]);
@@ -44,7 +43,6 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/jobs — Tạo việc làm mới (admin)
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const { title, department, location, type, experience, salary, description, requirements, benefits, deadline } = req.body;
@@ -58,7 +56,6 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-// PUT /api/jobs/:id — Sửa việc làm (admin)
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const { title, department, location, type, experience, salary, description, requirements, benefits, deadline, status } = req.body;
@@ -72,7 +69,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// DELETE /api/jobs/:id — Xóa việc làm (admin)
+
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     await pool.query('DELETE FROM jobs WHERE id = ?', [req.params.id]);
