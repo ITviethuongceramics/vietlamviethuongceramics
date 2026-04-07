@@ -31,10 +31,10 @@ const coreValues = [
 ];
 
 const stats = [
-  { value: '15+', label: 'Năm kinh nghiệm' },
+  { value: '10+', label: 'Năm kinh nghiệm' },
   { value: '500+', label: 'Đối tác tin cậy' },
-  { value: '10K+', label: 'Dự án hoàn thành' },
-  { value: '30+', label: 'Quốc gia xuất khẩu' },
+  { value: '5K+', label: 'Dự án hoàn thành' },
+  { value: '10+', label: 'Quốc gia xuất khẩu' },
 ];
 
 // Custom hook: IntersectionObserver
@@ -227,7 +227,7 @@ export default function AboutPage() {
             </p>
             <div className="about-vision__mission-image">
               <img
-                src="https://viethuongceramics.com/wp-content/smush-webp/2023/11/NV-VIET-HUONG-CERAMICS-2-1920.png.webp"
+                src="https://viethuongceramics.com/wp-content/smush-webp/2023/11/NV-VIET-HUONG-CERAMICS-2-1920.png.webp "
                 alt="Sứ mệnh Việt Hương"
               />
               <div className="about-vision__mission-image-overlay" />

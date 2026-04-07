@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const bcrypt = require('bcryptjs');
-
+const rssRoutes = require('./routes/rss');
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
@@ -30,6 +30,7 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/careers', careerRoutes);
 app.use('/api/applications', applicationRoutes);
+app.use('/api/rss', rssRoutes);
 
 app.get('/', (req, res) => res.send('Việt Hương Ceramics API đang chạy'));
 

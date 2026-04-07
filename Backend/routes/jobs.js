@@ -3,7 +3,6 @@ const router = express.Router();
 const pool = require('../data/db');
 const jwt = require('jsonwebtoken');
 
-// Middleware xác thực admin
 function authMiddleware(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Unauthorized' });
@@ -15,16 +14,17 @@ function authMiddleware(req, res, next) {
   }
 }
 
-// GET /api/jobs — Lấy danh sách việc làm
+// GET /api/jobs
 router.get('/', async (req, res) => {
   try {
-    const { search, location, type, experience } = req.query;
+    const { search, location, type, experience, department } = req.query;
     let query = "SELECT * FROM jobs WHERE status = 'active'";
     const params = [];
-    if (search) { query += ' AND title LIKE ?'; params.push(`%${search}%`); }
-    if (location) { query += ' AND location = ?'; params.push(location); }
-    if (type) { query += ' AND type = ?'; params.push(type); }
+    if (search)     { query += ' AND title LIKE ?';   params.push(`%${search}%`); }
+    if (location)   { query += ' AND location = ?';   params.push(location); }
+    if (type)       { query += ' AND type = ?';       params.push(type); }
     if (experience) { query += ' AND experience = ?'; params.push(experience); }
+    if (department) { query += ' AND department = ?'; params.push(department); }
     query += ' ORDER BY created_at DESC';
     const [rows] = await pool.query(query, params);
     res.json(rows);
@@ -33,6 +33,7 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/jobs/:id
 router.get('/:id', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM jobs WHERE id = ?', [req.params.id]);
@@ -43,6 +44,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// POST /api/jobs
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const { title, department, location, type, experience, salary, description, requirements, benefits, deadline } = req.body;
@@ -56,10 +58,11 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
+// PUT /api/jobs/:id
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const { title, department, location, type, experience, salary, description, requirements, benefits, deadline, status } = req.body;
-    await pool.query(
+    const [result] = await pool.query(
       'UPDATE jobs SET title=?, department=?, location=?, type=?, experience=?, salary=?, description=?, requirements=?, benefits=?, deadline=?, status=? WHERE id=?',
       [title, department, location, type, experience, salary, description, requirements, benefits, deadline, status, req.params.id]
     );
@@ -69,7 +72,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-
+// DELETE /api/jobs/:id
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     await pool.query('DELETE FROM jobs WHERE id = ?', [req.params.id]);

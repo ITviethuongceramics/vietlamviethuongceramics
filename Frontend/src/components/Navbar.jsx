@@ -14,7 +14,7 @@ export default function Navbar() {
   const isActive = (path) => location.pathname === path;
 
   const navItems = [
-    { path: '/', label: 'Trang chủ' },
+    { path: '/', label: '' },
     { path: '/gioi-thieu', label: 'Giới thiệu' },
     { path: '/tuyen-dung', label: 'Tuyển dụng' },
     { path: '/tin-tuc', label: 'Tin tức' },

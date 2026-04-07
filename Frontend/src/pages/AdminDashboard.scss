@@ -710,3 +710,66 @@ $text-sub:   #6b7280;
     }
   }
 }
+/* ── PAGINATION ── */
+.adm-pagination {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+
+  &__btn {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 8px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 6px;
+    background: #fff;
+    color: #444;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+
+    &:hover:not(:disabled) { border-color: #941b1b; color: #941b1b; }
+
+    &--active {
+      background: #941b1b;
+      border-color: #941b1b;
+      color: #fff;
+    }
+
+    &--nav {
+      color: #666;
+      &:disabled { opacity: 0.3; cursor: not-allowed; }
+    }
+  }
+
+  &__ellipsis {
+    font-size: 13px;
+    color: #aaa;
+    padding: 0 2px;
+    user-select: none;
+  }
+}
+
+/* ── TABLE FOOTER ── */
+.adm-table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0 8px;
+
+  &__count {
+    font-size: 13px;
+    color: #888;
+  }
+}
+
+/* ── FILTER BAR WRAP ── */
+.adm-filter-bar--wrap {
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}

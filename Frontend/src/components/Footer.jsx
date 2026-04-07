@@ -2,21 +2,7 @@ import './Footer.scss';
 import chuTich from '../assets/chu-tich.jpg';
 import logo from '../assets/logo.jpg';
 import { MapPin } from 'lucide-react';
-
 export default function Footer() {
-  const branches = [
-    "133 Trung Lương 14, Phường Hòa Xuân, TP. Đà Nẵng",
-    "Showroom VLXD 246 Nguyễn Hữu Thọ, Phường Hòa Cường, TP. Đà Nẵng",
-    "Showroom VLXD 999 Nguyễn Hữu Thọ, Phường Cẩm Lệ, TP. Đà Nẵng",
-    "Showroom VLXD Đường Đ1, Thôn Đông Yên, Xã Duy Xuyên, TP. Đà Nẵng",
-    "Showroom 246 Nguyễn Duy Trinh, P. Bình Trưng, TP. Hồ Chí Minh",
-    "Showroom 298 Phạm Văn Đồng, Phường Hưng Đạo, TP Hải Phòng",
-    "Tổng Kho VLXD Việt Hương – Đường ĐH 25.DX, Xã Duy Xuyên, TP. Đà Nẵng",
-    "Kho VLXD Việt Hương - 307-315 Liên Phường, Phường Long Trường, TP. Hồ Chí Minh",
-    "Kho VLXD Việt Hương - 298 Phạm Văn Đồng, Phường Hưng Đạo, TP Hải Phòng",
-    "Nhà máy VLXD Việt Hương – Cụm KCN Tây An, Xã Duy Xuyên, TP. Đà Nẵng"
-  ];
-
   return (
     <footer className="footer">
 
@@ -32,20 +18,16 @@ export default function Footer() {
           <div className="chairman-img">
             <img src={chuTich} alt="Nguyễn Trung Trực" />
           </div>
-
           <div className="chairman-content">
             <h2>CHỦ TỊCH NGUYỄN TRUNG TRỰC</h2>
-
             <p>
               Chủ tịch HĐQT Viet Huong Ceramics vừa được vinh danh TOP 30 Giải thưởng
               Sao Đỏ – Doanh nhân trẻ Việt Nam tiêu biểu 2025.
             </p>
-
             <p>
               Dưới sự dẫn dắt của ông, Viet Huong Ceramics không ngừng phát triển,
               khẳng định vị thế trong lĩnh vực vật liệu xây dựng và logistics.
             </p>
-
             <ul>
               <li>Tăng trưởng ổn định và bền vững</li>
               <li>Tiên phong vật liệu xây dựng xanh</li>
@@ -56,32 +38,76 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* ⚪ DANH SÁCH CƠ SỞ */}
-      <div className="branches-section">
-        <h2>HỆ THỐNG CƠ SỞ</h2>
-
-        <div className="branches-list">
-          {branches.map((item, index) => (
-            <div className="branch-card" key={index}>
-              <div className="info">
-                <MapPin size={18} />
-                <span>{item}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
+      {/* 🔳 BOTTOM */}
       {/* 🔳 BOTTOM */}
       <div className="footer-bottom">
-        <div className="company">
-          <img src={logo} alt="logo" />
+        <div className="footer-bottom__inner">
 
-          <div className="company-info">
-            <p>CÔNG TY CP XÂY DỰNG GỐM SỨ VIỆT HƯƠNG</p>
-            <p>MST: 0401756026</p>
-            <p>©2026 viethuongceramics</p>
+          {/* Cột 1: Logo + địa chỉ */}
+          <div className="footer-col footer-col--logo">
+            <img src={logo} alt="logo" />
+            <ul className="address-list">
+              {[
+                "133 Trung Lương 14, Phường Hòa Xuân, Thành Phố Đà Nẵng",
+                "Showroom VLXD 246 Nguyễn Hữu Thọ, Phường Hòa Cường, TP. Đà Nẵng",
+                "Showroom VLXD 999 Nguyễn Hữu Thọ, Phường Cẩm Lệ, TP. Đà Nẵng",
+                "Showroom VLXD Đường Đ1, Thôn Đông Yên, Xã Duy Xuyên, TP. Đà Nẵng",
+                "Showroom 246 Nguyễn Duy Trinh, P. Bình Trưng, TP. Hồ Chí Minh",
+                "Showroom Số 298 Phạm Văn Đồng, Phường Hưng Đạo, TP Hải Phòng",
+                "Tổng Kho VLXD Việt Hương – Đường ĐH 25.DX, Xã Duy Xuyên, TP. Đà Nẵng",
+                "Kho VLXD Việt Hương - 307-315 Liên Phường, Phường Long Trường, TP. Hồ Chí Minh",
+                "Kho VLXD Việt Hương - 298 Phạm Văn Đồng, Phường Hưng Đạo, TP Hải Phòng",
+                "Nhà máy VLXD Việt Hương – Cụm KCN Tây An, Xã Duy Xuyên, TP. Đà Nẵng",
+              ].map((addr, i) => (
+                <li key={i}>
+                  <MapPin size={13} />
+                  <span>{addr}</span>
+                </li>
+              ))}
+            </ul>
           </div>
+
+          {/* Cột 2 */}
+          <div className="footer-col">
+            <h4>VIET HUONG CERAMICS</h4>
+            <ul>
+              <li><span>Về chúng tôi</span></li>
+              <li><span>Dự án</span></li>
+              <li><span>Sản phẩm</span></li>
+              <li><span>Tin tức</span></li>
+              <li><span>Liên hệ</span></li>
+            </ul>
+            <h4>SẢN PHẨM</h4>
+            <ul>
+              <li><span>Gạch lát nền</span></li>
+              <li><span>Gạch ốp tường</span></li>
+              <li><span>Gạch Mosaic</span></li>
+              <li><span>Gạch Trang Trí</span></li>
+              <li><span>Thiết bị vệ sinh</span></li>
+            </ul>
+          </div>
+
+          {/* Cột 3 */}
+          <div className="footer-col">
+            <h4>DỊCH VỤ HỖ TRỢ</h4>
+            <ul>
+              <li><span>Thiết kế - Phối cảnh</span></li>
+              <li><span>Câu hỏi thường gặp</span></li>
+            </ul>
+            <h4>CHÍNH SÁCH - ĐIỀU KHOẢN</h4>
+            <ul>
+              <li><span>Chính sách giao hàng</span></li>
+              <li><span>Chính sách thanh toán</span></li>
+              <li><span>Chính sách bảo mật</span></li>
+              <li><span>Chính sách bảo hành</span></li>
+            </ul>
+            <h4>HOTLINE HỖ TRỢ</h4>
+            <ul>
+              <li><a href="tel:0905895499">Phòng Mua Hàng - 0905 895 499</a></li>
+              <li><a href="tel:0898194329">Nhà máy - 0898 194 329</a></li>
+            </ul>
+          </div>
+
         </div>
       </div>
 

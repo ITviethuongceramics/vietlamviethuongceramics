@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Calendar, Tag, ChevronRight, ArrowRight, Newspaper } from 'lucide-react';
+import { Calendar, Tag, ChevronRight, ArrowRight, Newspaper, ChevronLeft } from 'lucide-react';
 import './NewsPage.scss';
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:5000').replace(/\/api$/, '');
 
 const FEEDS = [
-
-  { label: 'Tin tức',          slug: 'tin-tuc'      },
-
+  { label: 'Tin tức', slug: 'tin-tuc' },
 ];
+
+const ITEMS_PER_PAGE = 9;
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('vi-VN', {
@@ -37,22 +37,27 @@ function useReveal(dep) {
 
 export default function NewsPage() {
   const [activeTab, setActiveTab] = useState(0);
-  const [cache,     setCache]     = useState({});   // { slug: items[] }
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState(false);
+  const [cache, setCache] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const currentSlug = FEEDS[activeTab].slug;
-  const news        = cache[currentSlug] ?? [];
-  const pageRef     = useReveal(news.length);
+  const news = cache[currentSlug] ?? [];
+  const pageRef = useReveal(news.length);
+
+  const totalPages = news.length === 0 ? 1 : Math.ceil((news.length - 1) / ITEMS_PER_PAGE);
+  const featured = currentPage === 1 ? news[0] : null;
+  const cardItems = currentPage === 1
+    ? news.slice(1, ITEMS_PER_PAGE)
+    : news.slice(1 + (currentPage - 1) * ITEMS_PER_PAGE, 1 + currentPage * ITEMS_PER_PAGE);
 
   const fetchNews = useCallback(async (slug, force = false) => {
-    // Đã có cache → hiện ngay, không fetch lại
     if (!force && cache[slug]) return;
-
     setLoading(true);
     setError(false);
     try {
-      const res  = await fetch(`${API_BASE}/api/rss?feed=${slug}&count=20`);
+      const res = await fetch(`${API_BASE}/api/rss?feed=${slug}&count=50`);
       const data = await res.json();
       if (data.status === 'ok') {
         setCache(prev => ({ ...prev, [slug]: data.items }));
@@ -65,37 +70,53 @@ export default function NewsPage() {
     setLoading(false);
   }, [cache]);
 
-  // Fetch tab hiện tại
   useEffect(() => {
     fetchNews(currentSlug);
+    setCurrentPage(1);
   }, [currentSlug]);
 
-  // Prefetch các tab còn lại sau 1.5s (chạy nền, không block UI)
   useEffect(() => {
     const timer = setTimeout(() => {
       FEEDS.forEach(f => {
         if (f.slug !== currentSlug && !cache[f.slug]) {
-          fetch(`${API_BASE}/api/rss?feed=${f.slug}&count=20`)
+          fetch(`${API_BASE}/api/rss?feed=${f.slug}&count=50`)
             .then(r => r.json())
             .then(data => {
-              if (data.status === 'ok') {
+              if (data.status === 'ok')
                 setCache(prev => ({ ...prev, [f.slug]: data.items }));
-              }
             })
-            .catch(() => {});
+            .catch(() => { });
         }
       });
     }, 1500);
     return () => clearTimeout(timer);
-  }, []); // chỉ chạy 1 lần lúc mount
+  }, []);
 
-  const featured = news[0];
-  const rest      = news.slice(1);
+  const goToPage = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const getPageNumbers = () => {
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push('...');
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pages.push(i);
+      }
+      if (currentPage < totalPages - 2) pages.push('...');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
 
   return (
     <div className="news-page" ref={pageRef}>
 
-      {/* ── HERO ── */}
+      {/* HERO */}
       <div className="news-hero">
         <div className="news-hero__overlay" />
         <div className="news-hero__content">
@@ -110,7 +131,7 @@ export default function NewsPage() {
         </div>
       </div>
 
-      {/* ── TABS ── */}
+      {/* TABS */}
       <div className="news-tabs" data-reveal>
         {FEEDS.map((f, i) => (
           <button
@@ -119,7 +140,6 @@ export default function NewsPage() {
             onClick={() => setActiveTab(i)}
           >
             {f.label}
-            {/* Chấm xanh nhỏ báo đã prefetch xong */}
             {cache[f.slug] && i !== activeTab && (
               <span style={{
                 display: 'inline-block', width: 6, height: 6,
@@ -131,7 +151,7 @@ export default function NewsPage() {
         ))}
       </div>
 
-      {/* ── BODY ── */}
+      {/* BODY */}
       <div className="news-body">
 
         {loading && news.length === 0 && (
@@ -159,6 +179,7 @@ export default function NewsPage() {
                 className="news-featured"
                 data-reveal
               >
+
                 <div className="news-featured__img">
                   {featured.thumbnail
                     ? <img src={featured.thumbnail} alt={featured.title} />
@@ -182,7 +203,7 @@ export default function NewsPage() {
             )}
 
             <div className="news-grid">
-              {rest.map((item, i) => (
+              {cardItems.map((item, i) => (
                 <a
                   key={i}
                   href={item.link}
@@ -216,9 +237,42 @@ export default function NewsPage() {
                 </a>
               ))}
             </div>
+
+            {/* PAGINATION */}
+            {totalPages > 1 && (
+              <div className="news-pagination">
+                <button
+                  className="news-pagination__btn news-pagination__btn--nav"
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                {getPageNumbers().map((page, idx) =>
+                  page === '...'
+                    ? <span key={`ellipsis-${idx}`} className="news-pagination__ellipsis">...</span>
+                    : <button
+                      key={page}
+                      className={`news-pagination__btn ${currentPage === page ? 'news-pagination__btn--active' : ''}`}
+                      onClick={() => goToPage(page)}
+                    >
+                      {page}
+                    </button>
+                )}
+
+                <button
+                  className="news-pagination__btn news-pagination__btn--nav"
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
-    </div>
+    </div >
   );
 }

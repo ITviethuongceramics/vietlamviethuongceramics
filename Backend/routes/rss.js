@@ -10,10 +10,16 @@ const FEEDS = {
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
 function extractImage(str = '') {
+  // Ưu tiên lấy từ srcset (https)
+  const srcset = str.match(/srcset=["']([^"']+)["']/);
+  if (srcset) {
+    const firstUrl = srcset[1].split(',')[0].trim().split(' ')[0];
+    if (firstUrl.startsWith('https')) return firstUrl;
+  }
+  // Fallback: src thường, đổi http → https
   const m = str.match(/<img[^>]+src=["']([^"']+)["']/);
-  return m?.[1] ?? null;
+  return m ? m[1].replace(/^http:\/\//, 'https://') : null;
 }
 
 function stripHtml(str = '') {
@@ -33,27 +39,46 @@ function parseXML(xml) {
   const itemBlocks = xml.match(/<item>([\s\S]*?)<\/item>/g) ?? [];
 
   for (const block of itemBlocks) {
-    const get = (tag) => {
-      const m = block.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>|<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`));
-      return m ? (m[1] ?? m[2] ?? '').trim() : '';
+
+    // Lấy tag đơn giản, KHÔNG dùng namespace regex chung
+    const getCDATA = (tag) => {
+      const m = block.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>`));
+      return m ? m[1].trim() : '';
+    };
+    const getPlain = (tag) => {
+      const m = block.match(new RegExp(`<${tag}[^>]*>([^<]*)<\\/${tag}>`));
+      return m ? m[1].trim() : '';
     };
 
-    // Categories
-    const catMatches = [...block.matchAll(/<category><!\[CDATA\[([\s\S]*?)\]\]><\/category>/g)];
-    const categories = catMatches.map(m => m[1].trim());
+    // Link: chỉ lấy <link> thuần (không namespace), fallback guid
+    const link =
+      block.match(/<link>([^<]+)<\/link>/)?.[1]?.trim() ||
+      block.match(/<guid[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/guid>/)?.[1]?.trim() ||
+      getPlain('guid');
 
-    // Thumbnail: thử media:content trước, rồi enclosure, rồi đào trong content
-    const mediaSrc  = (block.match(/<media:content[^>]+url=["']([^"']+)["']/) ?? [])[1];
-    const enclosure = (block.match(/<enclosure[^>]+url=["']([^"']+)["']/)    ?? [])[1];
-    const content   = get('content:encoded') || get('description');
-    const thumbnail = mediaSrc || enclosure || extractImage(content) || null;
+    // Title, pubDate
+    const title   = getCDATA('title')   || getPlain('title');
+    const date    = getPlain('pubDate');
+
+    // Description và content:encoded — tách rõ ràng
+    const descRaw    = getCDATA('description');
+    const contentRaw = block.match(/<content:encoded><!\[CDATA\[([\s\S]*?)\]\]><\/content:encoded>/)?.[1] ?? '';
+
+    // Categories
+    const categories = [...block.matchAll(/<category><!\[CDATA\[([\s\S]*?)\]\]><\/category>/g)]
+      .map(m => m[1].trim());
+
+    // Thumbnail
+    const mediaSrc  = block.match(/<media:content[^>]+url=["']([^"']+)["']/)?.[1];
+    const enclosure = block.match(/<enclosure[^>]+url=["']([^"']+)["']/)?.[1];
+    const thumbnail = mediaSrc || enclosure || extractImage(contentRaw) || extractImage(descRaw) || null;
 
     items.push({
-      title:       get('title'),
-      link:        get('link') || get('guid'),
-      date:        get('pubDate'),
+      title,
+      link,
+      date,
       categories,
-      description: stripHtml(get('description')),
+      description: stripHtml(descRaw),
       thumbnail,
     });
   }
@@ -61,7 +86,6 @@ function parseXML(xml) {
   return items;
 }
 
-// ── Route: GET /api/rss?feed=tat-ca&count=20 ─────────────────────────────────
 router.get('/', async (req, res) => {
   const slug  = req.query.feed  ?? 'tat-ca';
   const count = Math.min(parseInt(req.query.count ?? '20', 10), 50);

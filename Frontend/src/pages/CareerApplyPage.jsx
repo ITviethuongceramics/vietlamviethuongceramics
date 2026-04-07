@@ -30,7 +30,6 @@ const EXPERIENCES = [
   { value: '3+ năm', label: '3+ năm' },
 ];
 
-// ── Facebook-style top progress bar ──────────────────────────
 function TopLoader({ active }) {
   return (
     <div className={`top-loader ${active ? 'active' : ''}`}>
@@ -39,7 +38,7 @@ function TopLoader({ active }) {
   );
 }
 
-// ── Floating label input ──────────────────────────────────────
+
 function FloatInput({ label, name, value, onChange, type = 'text', required }) {
   return (
     <div className={`float-group ${value ? 'has-value' : ''}`}>
@@ -58,7 +57,6 @@ function FloatInput({ label, name, value, onChange, type = 'text', required }) {
   );
 }
 
-// ── Custom Dropdown ───────────────────────────────────────────
 function CustomSelect({ label, name, value, onChange, options, required, placeholder = '' }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
