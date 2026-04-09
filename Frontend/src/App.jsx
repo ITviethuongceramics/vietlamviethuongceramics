@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { useEffect } from 'react'; // ← thêm useEffect
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import JobListPage from './pages/JobListPage';
@@ -22,21 +23,24 @@ function FloatingContact() {
   );
 }
 
-// 👉 Tách ra component để dùng useLocation
+// AppContent dùng useLocation
 function AppContent() {
   const location = useLocation();
 
-  // ❌ Những route cần ẩn layout
+  // 👇 Tự động cuộn lên đầu mỗi khi đổi route
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
+  // Ẩn layout trên các trang admin/ứng tuyển
   const hideLayout =
     location.pathname.startsWith('/admin') ||
     location.pathname.includes('/ung-tuyen');
 
   return (
     <>
-      {/* Navbar */}
       {!hideLayout && <Navbar />}
 
-      {/* Routes */}
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/gioi-thieu" element={<AboutPage />} />
@@ -50,7 +54,6 @@ function AppContent() {
         <Route path="/ung-tuyen" element={<CareerApplyPage />} />
       </Routes>
 
-      {/* Footer + Contact */}
       {!hideLayout && <Footer />}
       {!hideLayout && <FloatingContact />}
     </>
