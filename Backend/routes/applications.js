@@ -2,13 +2,14 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../data/db');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const SibApiV3Sdk = require('@getbrevo/brevo');
 const { uploadCV, appendToSheet } = require('../services/google');
 const { candidateEmailHtml, hrEmailHtml } = require('./email_templates');
 
+// ── AUTH ─────────────────────────────────────────────────────
 function authMiddleware(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Unauthorized' });
@@ -20,16 +21,31 @@ function authMiddleware(req, res, next) {
   }
 }
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp-relay.brevo.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.BREVO_USER,
-    pass: process.env.BREVO_PASS
-  }
-});
+// ── BREVO API ─────────────────────────────────────────────────
+const defaultClient = SibApiV3Sdk.ApiClient.instance;
+defaultClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
+const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
+async function sendEmail({ to, subject, html, fromName = 'VIET HUONG CERAMICS - Phòng Nhân Sự', attachments = [] }) {
+  const email = new SibApiV3Sdk.SendSmtpEmail();
+  email.sender      = { name: fromName, email: process.env.BREVO_FROM };
+  email.to          = [{ email: to }];
+  email.subject     = subject;
+  email.htmlContent = html;
+
+  if (attachments.length > 0) {
+    email.attachment = attachments
+      .filter(a => fs.existsSync(a.path))
+      .map(a => ({
+        name:    a.filename,
+        content: fs.readFileSync(a.path).toString('base64'),
+      }));
+  }
+
+  return apiInstance.sendTransacEmail(email);
+}
+
+// ── MULTER ────────────────────────────────────────────────────
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = path.join(__dirname, '..', 'uploads', 'cv');
@@ -52,9 +68,11 @@ const upload = multer({
   },
 });
 
+// ── HELPERS ───────────────────────────────────────────────────
 const formatMoney = (num) => new Intl.NumberFormat('vi-VN').format(num) + ' VNĐ';
 const getHonorific = (name) => name?.toLowerCase().includes('chị') ? 'Chị' : 'Anh';
 
+// ── EMAIL TEMPLATES ───────────────────────────────────────────
 function getOfferEmailHTML({ app, position, formattedStartDate, work_location, probation_period, salary, probation_salary_percent, probationSalary, work_schedule }) {
   const h = getHonorific(app.full_name);
   const logoUrl = process.env.LOGO_URL || '';
@@ -308,11 +326,10 @@ router.post('/send-offer', authMiddleware, async (req, res) => {
       probationSalary, work_schedule
     });
 
-    await transporter.sendMail({
-      from:    `"VIET HUONG CERAMICS - Phòng Nhân Sự" <${process.env.BREVO_FROM}>`,
+    await sendEmail({
       to:      app.email,
       subject: `THƯ MỜI NHẬN VIỆC - ${position} - VIET HUONG CERAMICS`,
-      html:    emailHTML
+      html:    emailHTML,
     });
 
     res.json({ message: 'Đã gửi thư mời nhận việc thành công' });
@@ -333,11 +350,11 @@ router.post('/send-rejection', authMiddleware, async (req, res) => {
     const app = apps[0];
     const emailHTML = getRejectionEmailHTML({ app });
 
-    await transporter.sendMail({
-      from:    `"Việt Hương Ceramics - Phòng Nhân Sự" <${process.env.BREVO_FROM}>`,
+    await sendEmail({
       to:      app.email,
       subject: 'Thông báo kết quả tuyển dụng - Việt Hương Ceramics',
-      html:    emailHTML
+      html:    emailHTML,
+      fromName: 'Việt Hương Ceramics - Phòng Nhân Sự',
     });
 
     res.json({ message: 'Đã gửi email thông báo kết quả' });
@@ -364,18 +381,17 @@ router.post('/manual', authMiddleware, upload.single('cv'), async (req, res) => 
   let cvLink = null;
 
   try {
-    // 1. Upload CV lên Drive TRƯỚC (nếu có)
+    // 1. Upload CV lên Drive trước (nếu có)
     if (cvFile) {
       try {
         cvLink = await uploadCV(cvFile.path, cvFile.originalname);
         console.log('[UPLOAD SUCCESS] CV link:', cvLink);
       } catch (err) {
         console.error('[UPLOAD ERROR]', err.message);
-        // Có thể tiếp tục mà không có CV link
       }
     }
 
-    // 2. Insert vào database với CV link
+    // 2. Insert vào database
     await pool.query(
       `INSERT INTO applications 
         (id, full_name, email, phone, position, experience, address, cover_letter, cv_link, email_sent, received_at)
@@ -385,19 +401,17 @@ router.post('/manual', authMiddleware, upload.single('cv'), async (req, res) => 
 
     console.log('[DB SUCCESS] Application saved with ID:', id);
 
-    // 3. Response thành công ngay lập tức
+    // 3. Response thành công ngay
     res.json({ success: true });
 
-    // 4. Các task background (email, sheets) chạy sau khi đã response
+    // 4. Background tasks
     (async () => {
       try {
         // Ghi Google Sheets
         appendToSheet({
-          id, 
-          fullName: full_name, 
-          email, 
-          phone,
-          position, 
+          id,
+          fullName: full_name,
+          email, phone, position,
           experience: experience || '',
           address: address || '',
           cvFileName: cvLink || 'Không có',
@@ -406,35 +420,19 @@ router.post('/manual', authMiddleware, upload.single('cv'), async (req, res) => 
 
         // Gửi 2 mail song song
         await Promise.all([
-          transporter.sendMail({
-            from:    `"Việt Hương Ceramics" <${process.env.BREVO_FROM}>`,
+          sendEmail({
             to:      email,
             subject: 'Xác nhận nhận hồ sơ ứng tuyển — Việt Hương Ceramics',
-            html:    candidateEmailHtml({
-              fullName:   full_name,
-              position,
-              experience: experience || '',
-              phone,
-              address:    address || '',
-              cvFile,
-            }),
+            html:    candidateEmailHtml({ fullName: full_name, position, experience: experience || '', phone, address: address || '', cvFile }),
+            fromName: 'Việt Hương Ceramics',
           }).then(() => console.log('[EMAIL OK] Ứng viên:', email))
             .catch(err => console.error('[EMAIL LỖI] Ứng viên:', err.message)),
 
-          transporter.sendMail({
-            from:    `"Việt Hương Ceramics" <${process.env.BREVO_FROM}>`,
-            to:      process.env.HR_MAIL,
-            subject: `[Ứng tuyển mới] ${full_name} — ${position}`,
-            html:    hrEmailHtml({
-              fullName:    full_name,
-              email,
-              phone,
-              position,
-              experience:  experience  || '',
-              address:     address     || '',
-              coverLetter: cover_letter || '',
-              cvFile,
-            }),
+          sendEmail({
+            to:          process.env.HR_MAIL,
+            subject:     `[Ứng tuyển mới] ${full_name} — ${position}`,
+            html:        hrEmailHtml({ fullName: full_name, email, phone, position, experience: experience || '', address: address || '', coverLetter: cover_letter || '', cvFile }),
+            fromName:    'Việt Hương Ceramics',
             attachments: cvFile ? [{ filename: cvFile.originalname, path: cvFile.path }] : [],
           }).then(() => console.log('[EMAIL OK] HR:', process.env.HR_MAIL))
             .catch(err => console.error('[EMAIL LỖI] HR:', err.message)),
@@ -444,12 +442,12 @@ router.post('/manual', authMiddleware, upload.single('cv'), async (req, res) => 
         await pool.query('UPDATE applications SET email_sent = 1 WHERE id = ?', [id]);
 
         // Xóa file tạm
-        if (cvFile) { 
-          try { 
-            fs.unlinkSync(cvFile.path); 
-            console.log('[FILE CLEANUP] Deleted temp file:', cvFile.path);
-          } catch (cleanupErr) {
-            console.error('[FILE CLEANUP ERROR]', cleanupErr.message);
+        if (cvFile) {
+          try {
+            fs.unlinkSync(cvFile.path);
+            console.log('[FILE CLEANUP] Deleted:', cvFile.path);
+          } catch (e) {
+            console.error('[FILE CLEANUP ERROR]', e.message);
           }
         }
 
@@ -460,12 +458,7 @@ router.post('/manual', authMiddleware, upload.single('cv'), async (req, res) => 
 
   } catch (err) {
     console.error('[DB ERROR]', err.message);
-    
-    // Xóa file nếu đã upload nhưng DB fail
-    if (cvFile) {
-      try { fs.unlinkSync(cvFile.path); } catch {}
-    }
-    
+    if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch {} }
     return res.status(500).json({ success: false, message: 'Lỗi lưu dữ liệu.' });
   }
 });
