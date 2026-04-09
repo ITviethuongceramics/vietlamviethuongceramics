@@ -132,28 +132,29 @@ export default function ApplicationsManager({ token }) {
     }
   }
 
- async function updateApplication(id, status, note) {
-  if (status === 'passed') {
-    setOfferData(prev => ({ ...prev, position: selectedApp.position || '', start_date: '', salary: '' }));
-    setShowOfferModal(true);
-    return;
-  }
-  
-  if (status === 'failed') {
-    // Đóng detail modal trước
-    const appToReject = selectedApp;
-    setSelectedApp(null);
+  async function updateApplication(id, status, note) {
+    if (status === 'passed') {
+      setOfferData(prev => ({ ...prev, position: selectedApp.position || '', start_date: '', salary: '' }));
+      setShowOfferModal(true);
+      return;
+    }
     
-    showConfirm('Gửi email thông báo không đạt cho ứng viên?', async () => {
-      hideConfirm();
-      await sendRejectionEmail(appToReject);
-      await doUpdate(id, status, note);
-    });
-    return;
+    if (status === 'failed') {
+      const appToReject = selectedApp;
+      setSelectedApp(null);
+      
+      showConfirm('Gửi email thông báo không đạt cho ứng viên?', async () => {
+        hideConfirm();
+        // Gửi email ở chế độ background – KHÔNG await để không làm chậm cập nhật trạng thái
+        sendRejectionEmail(appToReject).catch(err => console.error('Lỗi gửi email từ chối:', err));
+        await doUpdate(id, status, note);
+      });
+      return;
+    }
+    
+    await doUpdate(id, status, note);
   }
-  
-  await doUpdate(id, status, note);
-}
+
   async function doUpdate(id, status, note) {
     setUpdating(true);
     try {
@@ -173,12 +174,14 @@ export default function ApplicationsManager({ token }) {
     }
   }
 
+  // GỬI THƯ MỜI – HIỆN TOAST "ĐANG GỬI" NGAY LẬP TỨC
   async function sendOfferLetter() {
     if (!offerData.start_date || !offerData.salary) {
       showToast('Vui lòng điền đầy đủ thông tin bắt buộc', 'error');
       return;
     }
     setSending(true);
+    showToast('⏳ Đang gửi thư mời nhận việc...', 'info');
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/applications/send-offer`, {
         method: 'POST',
@@ -190,8 +193,9 @@ export default function ApplicationsManager({ token }) {
         showToast(error.message || 'Không thể gửi email', 'error');
         return;
       }
-      showToast('Đã gửi thư mời nhận việc thành công!', 'success');
+      showToast('✅ Đã gửi thư mời nhận việc thành công!', 'success');
       setShowOfferModal(false);
+      // Cập nhật trạng thái ứng viên thành "passed"
       await fetch(`${import.meta.env.VITE_API_URL}/applications/${selectedApp.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -200,14 +204,16 @@ export default function ApplicationsManager({ token }) {
       fetchApplications();
       setSelectedApp(null);
     } catch {
-      showToast('Có lỗi xảy ra khi gửi email', 'error');
+      showToast('❌ Có lỗi xảy ra khi gửi email', 'error');
     } finally {
       setSending(false);
     }
   }
 
+  // GỬI EMAIL TỪ CHỐI – CŨNG HIỆN TOAST NGAY
   async function sendRejectionEmail(app) {
     setSending(true);
+    showToast('⏳ Đang gửi email thông báo kết quả...', 'info');
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/applications/send-rejection`, {
         method: 'POST',
@@ -219,9 +225,9 @@ export default function ApplicationsManager({ token }) {
         showToast(error.message || 'Không thể gửi email từ chối', 'error');
         return;
       }
-      showToast('Đã gửi email thông báo kết quả', 'success');
+      showToast('✅ Đã gửi email thông báo kết quả', 'success');
     } catch {
-      showToast('Có lỗi xảy ra khi gửi email', 'error');
+      showToast('❌ Có lỗi xảy ra khi gửi email', 'error');
     } finally {
       setSending(false);
     }
