@@ -193,7 +193,7 @@ export default function ApplicationsManager({ token }) {
         showToast(error.message || 'Không thể gửi email', 'error');
         return;
       }
-      showToast('✅ Đã gửi thư mời nhận việc thành công!', 'success');
+      showToast('Đã gửi thư mời nhận việc thành công!', 'success');
       setShowOfferModal(false);
       // Cập nhật trạng thái ứng viên thành "passed"
       await fetch(`${import.meta.env.VITE_API_URL}/applications/${selectedApp.id}`, {
@@ -225,7 +225,7 @@ export default function ApplicationsManager({ token }) {
         showToast(error.message || 'Không thể gửi email từ chối', 'error');
         return;
       }
-      showToast('✅ Đã gửi email thông báo kết quả', 'success');
+      showToast(' Đã gửi email thông báo kết quả', 'success');
     } catch {
       showToast('❌ Có lỗi xảy ra khi gửi email', 'error');
     } finally {

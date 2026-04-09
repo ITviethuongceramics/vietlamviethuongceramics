@@ -7,9 +7,8 @@ import {
 } from 'lucide-react';
 import './JobDetailPage.scss';
 
-// ❌ XÓA hook useReveal cũ đi
 
-// ✅ Thay bằng hook này
+// Thay bằng hook này
 function useReveal(dep) {
   const ref = useRef(null);
   useEffect(() => {
