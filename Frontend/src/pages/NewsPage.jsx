@@ -8,7 +8,7 @@ const FEEDS = [
   { label: 'Tin tức', slug: 'tin-tuc' },
 ];
 
-const ITEMS_PER_PAGE = 9;
+const ITEMS_PER_PAGE = 10;
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('vi-VN', {
