@@ -47,17 +47,26 @@
 
   &-content {
     flex: 1;
+    text-align: left;
 
     h2 {
       font-size: 28px;
       color: #b22222;
       margin-bottom: 16px;
+      margin-left: 35px;
     }
 
     p {
       color: #444;
       line-height: 1.6;
       margin-bottom: 10px;
+    } .chairman-award {
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+    .chairman-quote {
+      font-style: italic;
+      margin-top: 1rem;
     }
 
     ul {

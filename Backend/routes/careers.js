@@ -9,7 +9,6 @@ const { candidateEmailHtml, hrEmailHtml } = require('./email_templates');
 const { uploadCV, appendToSheet } = require('../services/google');
 const pool = require('../data/db');
 
-// ── Auth ─────────────────────────────────────────────────────
 function authMiddleware(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Unauthorized' });
@@ -21,7 +20,6 @@ function authMiddleware(req, res, next) {
   }
 }
 
-// ── Brevo API ────────────────────────────────────────────────
 const defaultClient = SibApiV3Sdk.ApiClient.instance;
 defaultClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
 const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
@@ -52,7 +50,6 @@ async function sendMailToHR({ subject, html, attachments }) {
   return apiInstance.sendTransacEmail(email);
 }
 
-// ── Multer config ────────────────────────────────────────────
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = path.join(__dirname, '..', 'uploads', 'cv');
@@ -86,7 +83,6 @@ const handleUpload = (req, res, next) => {
   }
 };
 
-// ── POST /api/careers/apply ──────────────────────────────────
 router.post('/apply', handleUpload, async (req, res) => {
   const { fullName, email, phone, position, experience, address, coverLetter } = req.body;
   const cvFile = req.file;

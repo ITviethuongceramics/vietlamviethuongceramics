@@ -2,6 +2,7 @@ import './Footer.scss';
 import chuTich from '../assets/chu-tich.jpg';
 import logo from '../assets/logo.jpg';
 import { MapPin } from 'lucide-react';
+
 export default function Footer() {
   return (
     <footer className="footer">
@@ -20,25 +21,26 @@ export default function Footer() {
           </div>
           <div className="chairman-content">
             <h2>CHỦ TỊCH NGUYỄN TRUNG TRỰC</h2>
-            <p>
+            {/* In đậm dòng giải thưởng */}
+            <p className="chairman-award">
               Chủ tịch HĐQT Viet Huong Ceramics vừa được vinh danh TOP 30 Giải thưởng
               Sao Đỏ – Doanh nhân trẻ Việt Nam tiêu biểu 2025.
             </p>
-            <p>
-              Dưới sự dẫn dắt của ông, Viet Huong Ceramics không ngừng phát triển,
-              khẳng định vị thế trong lĩnh vực vật liệu xây dựng và logistics.
+            {/* In nghiêng, ngoặc kép, căn trái */}
+            <p className="chairman-quote">
+              “Khi đội ngũ trưởng thành, doanh nghiệp sẽ tự lớn. 
+              Tôi đầu tư cho con người, cho văn hóa doanh nghiệp và môi trường làm việc, 
+              khi đội ngũ trưởng thành, doanh nghiệp sẽ tự lớn. 
+              Tôi không chạy theo lợi nhuận ngắn hạn, mà mọi quyết định đều được cân nhắc 
+              ở góc nhìn 5 - 10 năm, gắn với trách nhiệm xã hội và môi trường. 
+              Chính những giá trị đó giúp tôi đứng vững trong giai đoạn khó khăn và cũng 
+              là nền tảng để doanh nghiệp tiếp tục phát triển trong chặng đường phía trước. 
+              Đầu tư vào con người, công nghệ và quản trị để doanh nghiệp vận hành minh bạch, hiệu quả hơn.”
             </p>
-            <ul>
-              <li>Tăng trưởng ổn định và bền vững</li>
-              <li>Tiên phong vật liệu xây dựng xanh</li>
-              <li>Chuẩn hóa sản xuất theo ISO – EN</li>
-              <li>Mở rộng hệ thống phân phối toàn quốc</li>
-            </ul>
           </div>
         </div>
       </div>
 
-      {/* 🔳 BOTTOM */}
       {/* 🔳 BOTTOM */}
       <div className="footer-bottom">
         <div className="footer-bottom__inner">

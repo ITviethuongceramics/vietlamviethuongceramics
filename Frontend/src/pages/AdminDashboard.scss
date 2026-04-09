@@ -8,7 +8,7 @@ $green:      #27ae60;
 $green-soft: rgba(39, 174, 96, 0.1);
 $orange:     #e67e22;
 $orange-soft:rgba(230, 126, 34, 0.1);
-$sidebar-bg: #292323;
+$sidebar-bg: #27261f;
 $sidebar-w:  230px;
 $white:      #ffffff;
 $gray:       #6b7280;
@@ -22,7 +22,6 @@ $text-sub:   #6b7280;
 @keyframes fadeIn  { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes modalIn { from { opacity: 0; transform: scale(0.94) translateY(16px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 
-// ── LAYOUT ───────────────────────────────────────────────
 .adm {
   display: flex;
   min-height: 100vh;
@@ -30,8 +29,6 @@ $text-sub:   #6b7280;
   background: $gray-light;
   color: $text;
 }
-
-// ── SIDEBAR ───────────────────────────────────────────────
 .adm-sidebar {
   position: fixed;
   top: 0; left: 0; bottom: 0;
@@ -168,7 +165,6 @@ $text-sub:   #6b7280;
   position: sticky;
   top: 0;
   z-index: 50;
-  background: $white;
   border-bottom: 1px solid $border;
   padding: 0 32px;
   height: 64px;
@@ -530,30 +526,35 @@ $text-sub:   #6b7280;
   }
 }
 
-// ── MODAL ─────────────────────────────────────────────────
 .adm-modal-backdrop {
   position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.45);
-  backdrop-filter: blur(4px);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 24px;
+  overflow-y: auto; // Cho phép scroll nếu modal quá cao
+  padding: 20px; // Khoảng cách an toàn
 }
 
+// Modal container - luôn ở giữa
 .adm-modal {
-  background: $white;
-  border-radius: 18px;
+  position: relative; // Không dùng fixed/absolute
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
   width: 100%;
-  max-width: 560px;
-  max-height: 88vh;
+  max-height: 90vh; // Giới hạn chiều cao
   display: flex;
   flex-direction: column;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.2);
-  animation: modalIn 0.3s cubic-bezier(0.22,1,0.36,1) both;
-
+  margin: auto; // Căn giữa
+  margin-top: -10px;
+  
   &__header {
     display: flex;
     align-items: center;
@@ -772,4 +773,35 @@ $text-sub:   #6b7280;
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+}
+.adm-icon-btn--red {
+  color: #dc2626;
+  &:hover { background: #fee2e2; }
+}
+.adm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &--pending {
+    background: #fef9c3;   // vàng nhạt
+    color: #a16207;
+    border: 1px solid #fde047;
+  }
+
+  &--passed {
+    background: #dcfce7;   // xanh nhạt
+    color: #15803d;
+    border: 1px solid #86efac;
+  }
+
+  &--failed {
+    background: #fee2e2;   // đỏ nhạt
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+  }
 }
