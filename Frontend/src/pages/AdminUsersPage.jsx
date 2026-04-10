@@ -734,7 +734,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const token    = localStorage.getItem('admin_token');
   const role     = localStorage.getItem('admin_role');
-  const [tab, setTab] = useState('branches');
+  const [tab, setTab] = useState('users');
 
   useEffect(() => { if (!token) navigate('/admin'); }, []);
 
