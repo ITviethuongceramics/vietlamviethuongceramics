@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const rssRoutes = require('./routes/rss');
+
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
@@ -59,7 +60,7 @@ async function initDB() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-await pool.query(`CREATE TABLE IF NOT EXISTS applications (
+    await pool.query(`CREATE TABLE IF NOT EXISTS applications (
       id BIGINT PRIMARY KEY,
       full_name VARCHAR(255),
       email VARCHAR(255),
@@ -75,16 +76,20 @@ await pool.query(`CREATE TABLE IF NOT EXISTS applications (
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // THÊM ĐOẠN NÀY
     try {
       await pool.query('ALTER TABLE applications ADD COLUMN email_sent TINYINT(1) DEFAULT 0');
     } catch (e) { /* column đã tồn tại */ }
 
+    try {
+      await pool.query("ALTER TABLE admins ADD COLUMN role VARCHAR(50) DEFAULT 'admin'");
+    } catch (e) { /* column đã tồn tại */ }
+
+    await pool.query("UPDATE admins SET role = 'superadmin' WHERE username = 'admin'");
+
     const [rows] = await pool.query('SELECT * FROM admins WHERE username = ?', ['admin']);
-    
     if (!rows.length) {
       const hash = await bcrypt.hash('admin123', 10);
-      await pool.query('INSERT INTO admins (username, password) VALUES (?, ?)', ['admin', hash]);
+      await pool.query("INSERT INTO admins (username, password, role) VALUES (?, ?, 'superadmin')", ['admin', hash]);
       console.log('Admin created!');
     }
     console.log('DB initialized!');
