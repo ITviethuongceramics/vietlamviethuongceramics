@@ -20,6 +20,7 @@ app.use(cors({
   origin: [
     'http://localhost:5173',
     'https://recruitment-viet-huong-1.onrender.com',
+    'https://vieclam.viethuongceramics.com',
     process.env.CLIENT_URL,
   ].filter(Boolean),
   credentials: true,
