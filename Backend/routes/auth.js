@@ -4,7 +4,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../data/db');
 
-// ── Auth Middleware ──────────────────────────────────────────
+// ── Auth Middleware ────────────────────────────────────────── 
+// ✅ CHỈ KHAI BÁO 1 LẦN Ở ĐÂY
 function authMiddleware(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Unauthorized' });
@@ -31,10 +32,10 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' }
     );
     res.json({ token, username: admin.username, role: admin.role });
-  } catch (err) {                          // ← thiếu dòng này
+  } catch (err) {
     res.status(500).json({ message: err.message });
-  }                                        // ← và dòng này
-});                                        // ← và dòng này
+  }
+});
 
 // ── GET /api/auth/users ──────────────────────────────────────
 router.get('/users', authMiddleware, async (req, res) => {
@@ -77,6 +78,7 @@ router.put('/users/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// ── DELETE /api/auth/users/:id ───────────────────────────────
 router.delete('/users/:id', authMiddleware, async (req, res) => {
   try {
     if (req.user.id === parseInt(req.params.id)) {
@@ -90,3 +92,4 @@ router.delete('/users/:id', authMiddleware, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.authMiddleware = authMiddleware;

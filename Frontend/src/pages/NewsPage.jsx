@@ -5,7 +5,7 @@ import './NewsPage.scss';
 const API_BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:5000').replace(/\/api$/, '');
 
 const FEEDS = [
-  { label: 'Tin tức', slug: 'tin-tuc' },
+  { label: 'Nội bộ & Sự kiện', slug: 'noi-bo', categoryId: 121 },
 ];
 
 const ITEMS_PER_PAGE = 10;
@@ -16,8 +16,8 @@ function formatDate(dateStr) {
   });
 }
 
-// Thay dep từ news.length thành kết hợp cả page
-function useReveal(dep) {
+
+function useReveal(dep) { 
   const ref = useRef(null);
   useEffect(() => {
     if (!dep) return;
@@ -67,7 +67,8 @@ export default function NewsPage() {
     setLoading(true);
     setError(false);
     try {
-      const res = await fetch(`${API_BASE}/api/rss?feed=${slug}&count=50`);
+      const feed = FEEDS.find(f => f.slug === slug);
+const res = await fetch(`${API_BASE}/api/rss/wordpress?category=${feed.categoryId}&count=50`);
       const data = await res.json();
       if (data.status === 'ok') {
         setCache(prev => ({ ...prev, [slug]: data.items }));
@@ -126,7 +127,6 @@ export default function NewsPage() {
   return (
     <div className="news-page" ref={pageRef}>
 
-      {/* HERO */}
       <div className="news-hero">
         <div className="news-hero__overlay" />
         <div className="news-hero__content">
@@ -141,7 +141,6 @@ export default function NewsPage() {
         </div>
       </div>
 
-      {/* TABS */}
       <div className="news-tabs" data-reveal>
         {FEEDS.map((f, i) => (
           <button
@@ -161,7 +160,6 @@ export default function NewsPage() {
         ))}
       </div>
 
-      {/* BODY */}
       <div className="news-body">
 
         {loading && news.length === 0 && (
@@ -199,9 +197,9 @@ export default function NewsPage() {
                 </div>
                 <div className="news-featured__content">
                   <div className="news-featured__meta">
-                    {featured.categories.slice(0, 2).map((c, i) => (
-                      <span className="news-cat" key={i}><Tag size={10} />{c}</span>
-                    ))}
+                  {(featured.categories || []).slice(0, 2).map((c, i) => (
+  <span className="news-cat" key={i}><Tag size={10} />{c}</span>
+))}
                     <span className="news-date"><Calendar size={12} />{formatDate(featured.date)}</span>
                   </div>
                   <h2 className="news-featured__title">{featured.title}</h2>
@@ -231,7 +229,7 @@ export default function NewsPage() {
                   </div>
                   <div className="news-card__body">
                     <div className="news-card__meta">
-                      {item.categories.slice(0, 1).map((c, j) => (
+                      {(item.categories || []).slice(0, 1).map((c, j) => (
                         <span className="news-cat news-cat--sm" key={j}>{c}</span>
                       ))}
                       <span className="news-date news-date--sm">
