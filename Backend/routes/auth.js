@@ -77,7 +77,6 @@ router.put('/users/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// ── DELETE /api/auth/users/:id ───────────────────────────────
 router.delete('/users/:id', authMiddleware, async (req, res) => {
   try {
     if (req.user.id === parseInt(req.params.id)) {
