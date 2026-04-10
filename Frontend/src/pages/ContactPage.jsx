@@ -9,33 +9,32 @@ const branches = [
     address: '246 Nguyễn Hữu Thọ, Phường Hòa Cường, TP. Đà Nẵng',
     email: 'facebook.com/gomsuviethuong',
     phone: '0905.386.888',
-    lat: 16.0339,
-    lng: 108.2170,
+    lat: 16.0378,
+    lng: 108.2105,
     image: 'https://res.cloudinary.com/dq8cmcln9/image/upload/v1775449642/danang_zprcls.webp',
   },
   {
     id: 'hp',
     name: 'Chi nhánh Hải Phòng',
     address: '298 Phạm Văn Đồng, Phường Hưng Đạo, TP. Hải Phòng',
-   email: 'facebook.com/gomsuviethuong',
+    email: 'facebook.com/gomsuviethuong',
     phone: '0905.386.888',
-    lat: 20.8538,
-    lng: 106.6882,
+    lat: 20.7963,
+    lng: 106.7118,
     image: 'https://res.cloudinary.com/dq8cmcln9/image/upload/v1775449642/haiphong_dn94ip.jpg',
   },
   {
     id: 'hcm',
     name: 'Chi nhánh Hồ Chí Minh',
     address: '246 Nguyễn Duy Trinh, Phường Bình Trưng, TP. Hồ Chí Minh',
-     email: 'facebook.com/gomsuviethuong',
+    email: 'facebook.com/gomsuviethuong',
     phone: '0905.386.888',
-    lat: 10.7763,
-    lng: 106.7588,
-    image: 'https://res.cloudinary.com/dq8cmcln9/image/upload/v1775449642/hcm_rp72ji.jpg',
+    lat: 10.7877,
+    lng: 106.7583,
+    image: 'https://viethuongceramics.com/wp-content/smush-webp/2026/01/LQM01215-scaled-1.jpg.webp',
   },
 ];
 
-// GeoJSON Việt Nam bao gồm vùng biển — dùng source của GADM
 const VN_GEOJSON_URL =
   'https://raw.githubusercontent.com/wmgeolab/geoBoundaries/main/releaseData/gbOpen/VNM/ADM0/geoBoundaries-VNM-ADM0.geojson';
 
@@ -70,18 +69,18 @@ export default function ContactPage() {
     function initMap() {
       if (!mapRef.current || leafletMap.current) return;
 
-    const map = window.L.map(mapRef.current, {
-  center: [16.0339, 108.2170], // ← mặc định Đà Nẵng
-  zoom: 15,
-  zoomControl: false,
-  scrollWheelZoom: false,
-  doubleClickZoom: false,
-  dragging: false,
-  touchZoom: false,
-  boxZoom: false,
-  keyboard: false,
-});
-     
+      const map = window.L.map(mapRef.current, {
+        center: [16.0339, 108.2170], // ← mặc định Đà Nẵng
+        zoom: 15,
+        zoomControl: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        dragging: false,
+        touchZoom: false,
+        boxZoom: false,
+        keyboard: false,
+      });
+
 
       // Tile sáng làm nền
       window.L.tileLayer(
@@ -142,7 +141,7 @@ export default function ContactPage() {
               const vietnam = data.features.find(f => f.properties.ISO_A3 === 'VNM');
               if (!vietnam) return;
 
-              const outerRing = [[-180,-90],[180,-90],[180,90],[-180,90],[-180,-90]];
+              const outerRing = [[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]];
               const inner = vietnam.geometry.type === 'MultiPolygon'
                 ? vietnam.geometry.coordinates.map(poly => poly[0])
                 : [vietnam.geometry.coordinates[0]];
@@ -188,13 +187,13 @@ export default function ContactPage() {
         marker.on('click', () => setActive(branch.id));
         markersRef.current[i] = marker;
       });
-setTimeout(() => {
-  markersRef.current[0]?.openPopup();
-}, 600);
+      setTimeout(() => {
+        markersRef.current[0]?.openPopup();
+      }, 600);
 
-setActive('dn'); // ← highlight card Đà Nẵng ngay từ đầu
+      setActive('dn'); // ← highlight card Đà Nẵng ngay từ đầu
 
-leafletMap.current = map;
+      leafletMap.current = map;
       leafletMap.current = map;
     }
 
@@ -211,13 +210,13 @@ leafletMap.current = map;
     };
   }, []);
 
-function handleCardClick(branch, index) {
-  setActive(branch.id);
-  if (leafletMap.current) {
-    leafletMap.current.flyTo([branch.lat, branch.lng], 15, { duration: 1.2 });
-    markersRef.current[index]?.openPopup();
+  function handleCardClick(branch, index) {
+    setActive(branch.id);
+    if (leafletMap.current) {
+      leafletMap.current.flyTo([branch.lat, branch.lng], 15, { duration: 1.2 });
+      markersRef.current[index]?.openPopup();
+    }
   }
-}
 
   return (
     <div className="cp">
@@ -247,7 +246,7 @@ function handleCardClick(branch, index) {
 
         {/* ── SIDEBAR ── */}
         <div className="cp-sidebar">
-        
+
 
           <div className="cp-cards">
             {branches.map((b, i) => (
@@ -284,24 +283,24 @@ function handleCardClick(branch, index) {
                 </div>
               </div>
             ))}
-          
+
           </div>
- 
+
           <div className="cp-contact-box">
             <Building2 size={16} className="cp-contact-box__icon" />
             <div>
               <p className="cp-contact-box__label">Nhà máy VLXD Việt Hương</p>
               <p className="cp-contact-box__value">Cụm KCN Tây An, Xã Duy Xuyên, TP. Đà Nẵng</p>
             </div>
-            
+
           </div>
-            <div className="cp-1">
-  <span className="cp-1__value">
-    Thêm nhiều chi nhánh khác trên khắp cả nước++
-  </span>
-</div>
+          <div className="cp-1">
+            <span className="cp-1__value">
+              Thêm nhiều chi nhánh khác trên khắp cả nước++
+            </span>
+          </div>
         </div>
-        
+
 
         {/* ── MAP ── */}
         <div className="cp-map-wrap">

@@ -16,10 +16,16 @@ function formatDate(dateStr) {
   });
 }
 
+// Thay dep từ news.length thành kết hợp cả page
 function useReveal(dep) {
   const ref = useRef(null);
   useEffect(() => {
     if (!dep) return;
+    // Reset tất cả elements về trạng thái ẩn trước
+    ref.current?.querySelectorAll('[data-reveal]').forEach(el => {
+      el.classList.remove('is-visible');
+    });
+
     const timer = setTimeout(() => {
       const obs = new IntersectionObserver(
         entries => entries.forEach(e => {
@@ -30,7 +36,11 @@ function useReveal(dep) {
       ref.current?.querySelectorAll('[data-reveal]').forEach(el => obs.observe(el));
       ref.current._obs = obs;
     }, 50);
-    return () => { clearTimeout(timer); ref.current?._obs?.disconnect(); };
+
+    return () => {
+      clearTimeout(timer);
+      ref.current?._obs?.disconnect();
+    };
   }, [dep]);
   return ref;
 }
@@ -44,7 +54,7 @@ export default function NewsPage() {
 
   const currentSlug = FEEDS[activeTab].slug;
   const news = cache[currentSlug] ?? [];
-  const pageRef = useReveal(news.length);
+  const pageRef = useReveal(`${news.length}-${currentPage}`);
 
   const totalPages = news.length === 0 ? 1 : Math.ceil((news.length - 1) / ITEMS_PER_PAGE);
   const featured = currentPage === 1 ? news[0] : null;
@@ -172,8 +182,7 @@ export default function NewsPage() {
         {news.length > 0 && (
           <>
             {featured && (
-              <a
-                href={featured.link}
+              <a key={`featured-${currentPage}`}
                 target="_blank"
                 rel="noreferrer"
                 className="news-featured"
@@ -202,7 +211,7 @@ export default function NewsPage() {
               </a>
             )}
 
-            <div className="news-grid">
+            <div className="news-grid" key={currentPage}>
               {cardItems.map((item, i) => (
                 <a
                   key={i}

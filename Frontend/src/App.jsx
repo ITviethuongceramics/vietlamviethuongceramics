@@ -12,6 +12,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import { Phone } from "lucide-react";
+import AdminUsersPage from './pages/AdminUsersPage';
 import './App.css';
 
 function FloatingContact() {
@@ -50,6 +51,7 @@ function AppContent() {
         <Route path="/tin-tuc" element={<NewsPage />} />
         <Route path="/lien-he" element={<ContactPage />} />
         <Route path="/admin" element={<AdminLoginPage />} />
+        <Route path="/admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/ung-tuyen" element={<CareerApplyPage />} />
       </Routes>

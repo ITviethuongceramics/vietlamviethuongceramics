@@ -25,13 +25,18 @@ export default function AdminLoginPage() {
         body: JSON.stringify({ username, password }),
       });
 
-      const data = await res.json();
+   const data = await res.json();
+if (!res.ok) throw new Error(data.message);
 
-      if (!res.ok) throw new Error(data.message);
+localStorage.setItem('admin_token', data.token);
+localStorage.setItem('admin_role', data.role);
 
-      localStorage.setItem('admin_token', data.token);
-      navigate('/admin/dashboard');
-
+// Điều hướng theo role
+if (data.role === 'superadmin') {
+  navigate('/admin/users');
+} else {
+  navigate('/admin/dashboard');
+}
     } catch (err) {
       setError(err.message || 'Đăng nhập thất bại');
     }
