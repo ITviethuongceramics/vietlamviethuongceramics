@@ -1,54 +1,59 @@
-const express = require('express');
-const router  = express.Router();
-const multer  = require('multer');
-const path    = require('path');
-const fs      = require('fs');
-const { authMiddleware } = require('./auth'); // đổi tên nếu khác
+const express    = require('express');
+const router     = express.Router();
+const multer     = require('multer');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('cloudinary').v2;
+const { authMiddleware } = require('./auth');
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:5000';
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, '../uploads/homepage');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${req.params.key}${ext}`);
-  },
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
-
-// GET /api/images/homepage — trả về tất cả URL ảnh
-router.get('/homepage', (req, res) => {
-  const dir = path.join(__dirname, '../uploads/homepage');
-  if (!fs.existsSync(dir)) return res.json({});
-  const files = fs.readdirSync(dir);
-  const result = {};
-  files.forEach(f => {
-    const key = path.parse(f).name;
-    result[key] = `${BASE_URL}/uploads/homepage/${f}`;
-  });
-  res.json(result);
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: (req) => ({
+    folder: 'viethuong/homepage',
+    public_id: req.params.key,  // tên file = key (banner1, banner2...)
+    overwrite: true,
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+  }),
 });
 
-// POST /api/images/homepage/:key — upload ảnh
+const upload = multer({ storage });
+
+// GET — trả về tất cả ảnh từ Cloudinary folder
+router.get('/homepage', async (req, res) => {
+  try {
+    const result = await cloudinary.search
+      .expression('folder:viethuong/homepage')
+      .execute();
+    const images = {};
+    result.resources.forEach(r => {
+      const key = r.public_id.replace('viethuong/homepage/', '');
+      images[key] = r.secure_url;
+    });
+    res.json(images);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// POST — upload ảnh
 router.post('/homepage/:key', authMiddleware, upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'Không có file' });
-  const url = `${BASE_URL}/uploads/homepage/${req.file.filename}`;
-  res.json({ url });
+  res.json({ url: req.file.path }); // Cloudinary trả về secure_url qua req.file.path
 });
 
-// DELETE /api/images/homepage/:key — xóa về mặc định
-router.delete('/homepage/:key', authMiddleware, (req, res) => {
-  const dir = path.join(__dirname, '../uploads/homepage');
-  if (fs.existsSync(dir)) {
-    const files = fs.readdirSync(dir).filter(f => path.parse(f).name === req.params.key);
-    files.forEach(f => fs.unlinkSync(path.join(dir, f)));
+// DELETE — xóa ảnh
+router.delete('/homepage/:key', authMiddleware, async (req, res) => {
+  try {
+    await cloudinary.uploader.destroy(`viethuong/homepage/${req.params.key}`);
+    res.json({ message: 'Đã xóa' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
-  res.json({ message: 'Đã xóa' });
 });
 
 module.exports = router;
