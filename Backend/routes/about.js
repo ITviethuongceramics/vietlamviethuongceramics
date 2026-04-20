@@ -1,21 +1,24 @@
-const express  = require('express');
-const router   = express.Router();
-const pool     = require('../data/db');
-const multer   = require('multer');
-const path     = require('path');
-const fs       = require('fs');
+const express    = require('express');
+const router     = express.Router();
+const pool       = require('../data/db');
+const multer     = require('multer');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('cloudinary').v2;
 const { authMiddleware } = require('./auth');
-const heicConvert = require('heic-convert');
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, '../uploads/about');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const ext  = path.extname(file.originalname);
-    cb(null, file.fieldname + '_' + Date.now() + ext);
-  },
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: (req, file) => ({
+    folder: 'viethuong/about',
+    public_id: file.fieldname + '_' + Date.now(),
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+  }),
 });
 
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
@@ -24,8 +27,6 @@ const uploadFields = upload.fields([
   { name: 'mission_image', maxCount: 1 },
   { name: 'vision_image',  maxCount: 1 },
 ]);
-
-const BASE_URL = process.env.BASE_URL || 'http://localhost:5000';
 
 // ── GET ──────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
@@ -44,9 +45,6 @@ router.get('/', async (req, res) => {
 // ── PUT ──────────────────────────────────────────────────────
 router.put('/', uploadFields, authMiddleware, async (req, res) => {
   try {
-    console.log('body:', req.body);
-    console.log('files:', req.files);
-
     const stats = req.body?.stats
       ? (Array.isArray(req.body.stats) ? req.body.stats : JSON.parse(req.body.stats))
       : [];
@@ -66,34 +64,26 @@ router.put('/', uploadFields, authMiddleware, async (req, res) => {
     const mission_title      = req.body?.mission_title      ?? '';
     const mission_text       = req.body?.mission_text       ?? '';
 
+    // Giữ URL cũ nếu không upload file mới
     let intro_image_url   = req.body?.intro_image_url   ?? '';
     let mission_image_url = req.body?.mission_image_url ?? '';
     let vision_image_url  = req.body?.vision_image_url  ?? '';
 
+    // Nếu có file mới → dùng URL Cloudinary
     if (req.files?.intro_image?.[0])
-      intro_image_url = `${BASE_URL}/uploads/about/${req.files.intro_image[0].filename}`;
+      intro_image_url = req.files.intro_image[0].path;
     if (req.files?.mission_image?.[0])
-      mission_image_url = `${BASE_URL}/uploads/about/${req.files.mission_image[0].filename}`;
+      mission_image_url = req.files.mission_image[0].path;
     if (req.files?.vision_image?.[0])
-      vision_image_url = `${BASE_URL}/uploads/about/${req.files.vision_image[0].filename}`;
+      vision_image_url = req.files.vision_image[0].path;
 
-    // ✅ values theo đúng thứ tự cột trong query
     const values = [
       JSON.stringify(stats),
-      intro_eyebrow,
-      intro_heading,
-      intro_heading_span,
-      intro_text1,
-      intro_text2,
-      intro_text3,
-      intro_pill,
+      intro_eyebrow, intro_heading, intro_heading_span,
+      intro_text1, intro_text2, intro_text3, intro_pill,
       intro_image_url,
-      vision_title,
-      JSON.stringify(vision_points),
-      vision_image_url,
-      mission_title,
-      mission_text,
-      mission_image_url,
+      vision_title, JSON.stringify(vision_points), vision_image_url,
+      mission_title, mission_text, mission_image_url,
     ];
 
     const [existing] = await pool.query('SELECT id FROM about_dynamic LIMIT 1');
