@@ -97,7 +97,8 @@ router.get('/wordpress', async (req, res) => {
     res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
     res.json({ status: 'ok', count: items.length, items, cached: false });
   } catch (err) {
-    console.error('[WordPress API Error]', err.message);
+    if (!['fetch failed', 'ENOTFOUND', 'ECONNREFUSED'].some(e => err.message.includes(e))) {
+      console.error('[WordPress API Error]', err.message);}
     // Nếu có cache cũ (dù hết hạn) vẫn trả về để fallback
     const staleCache = rssCache.get(cacheKey);
     if (staleCache) {

@@ -144,8 +144,8 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
       <td style="padding:30px 36px 12px;">
         <p style="margin:0 0 10px;font-size:15px;color:#111;"><strong>Kính gửi ${h}: ${app.full_name}</strong></p>
         <p style="margin:0 0 22px;font-size:14px;color:#555;line-height:1.9;">
-          Lời đầu tiên, Việt Hương Ceramics chân thành cảm ơn ${h} đã quan tâm đến Công ty chúng tôi.
-          Thông qua buổi trao đổi, trân trọng mời ${h} gia nhập đội ngũ Việt Hương Ceramics với thông tin nhận việc cụ thể như sau:
+          Lời đầu tiên, Viet Huong Ceramics chân thành cảm ơn ${h} đã quan tâm đến Công ty chúng tôi.
+          Thông qua buổi trao đổi, trân trọng mời ${h} gia nhập đội ngũ Viet Huong Ceramics với thông tin nhận việc cụ thể như sau:
         </p>
       </td>
     </tr>
@@ -191,17 +191,17 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
       </td>
     </tr>
     <tr>
-      <td style="background:#7f1d1d;padding:18px 28px;">
+      <td style="background:#ffffff;padding:18px 28px;border-top:1px solid #f5e0e0;">
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
-            <td style="color:rgba(255,255,255,0.85);font-family:Arial,sans-serif;font-size:12px;line-height:1.9;">
-              <strong style="color:#fff;font-size:13px;">Công ty cổ phần xây dựng gốm sứ Việt Hương</strong><br>
-              📍 133 Trung Lương 14, P. Hòa Xuân, TP. Đà Nẵng<br>
-              🌐 <a href="https://viethuongceramics.com" style="color:#93c5fd;text-decoration:none;">viethuongceramics.com</a> &nbsp;|&nbsp; 📞 0905.386.888
+       <td style="color:#555555;font-family:Arial,sans-serif;font-size:12px;line-height:1.9;">
+              <strong style="color:#B91C1C;font-size:13px;">Công ty cổ phần xây dựng gốm sứ Việt Hương</strong><br>
+              Trụ sở chính :  133 Trung Lương 14, P. Hòa Xuân, TP. Đà Nẵng<br>
+               <a href="https://viethuongceramics.com" style="color:#B91C1C;text-decoration:none;">viethuongceramics.com</a> &nbsp;|&nbsp; 0905.386.888
             </td>
             <td style="text-align:right;vertical-align:middle;">
               <img src="${logoUrl}" width="50" height="50"
-                style="border-radius:7px;background:rgba(255,255,255,0.12);padding:4px;object-fit:contain;" />
+                style="border-radius:7px;border:1px solid #f5e0e0;padding:4px;object-fit:contain;" />
             </td>
           </tr>
         </table>
@@ -289,11 +289,11 @@ function getRejectionEmailHTML({ app }) {
       </td>
     </tr>
     <tr>
-      <td style="background:#7f1d1d;padding:18px 28px;text-align:center;">
-        <div style="color:rgba(255,255,255,0.9);font-size:12px;line-height:2;">
-          <strong style="color:#fff;font-size:13px;">Công ty cổ phần xây dựng gốm sứ Việt Hương</strong><br>
-          📍 133 Trung Lương 14, P. Hòa Xuân, TP. Đà Nẵng<br>
-          🌐 <a href="https://viethuongceramics.com" style="color:#93c5fd;text-decoration:none;">viethuongceramics.com</a> &nbsp;|&nbsp; 📞 0905.386.888
+      <td style="background:#ffffff;padding:18px 28px;border-top:1px solid #f5e0e0;text-align:center;">
+     <div style="color:#555555;font-size:12px;line-height:1.9;font-family:Arial,sans-serif;">
+          <strong style="color:#B91C1C;font-size:13px;">Công ty cổ phần xây dựng gốm sứ Việt Hương</strong><br>
+           Trụ sở chính : 133 Trung Lương 14, P. Hòa Xuân, TP. Đà Nẵng<br>
+           <a href="https://viethuongceramics.com" style="color:#B91C1C;text-decoration:none;">viethuongceramics.com</a> &nbsp;|&nbsp;  0905.386.888
         </div>
       </td>
     </tr>
@@ -352,9 +352,9 @@ router.post('/send-rejection', authMiddleware, async (req, res) => {
 
     await sendEmail({
       to:      app.email,
-      subject: 'Thông báo kết quả tuyển dụng - Việt Hương Ceramics',
+      subject: 'Thông báo kết quả tuyển dụng - Viet Huong Ceramics',
       html:    emailHTML,
-      fromName: 'Việt Hương Ceramics - Phòng Nhân Sự',
+      fromName: 'Viet Huong Ceramics - Phòng Nhân Sự',
     });
 
     res.json({ message: 'Đã gửi email thông báo kết quả' });
@@ -422,9 +422,9 @@ router.post('/manual', authMiddleware, upload.single('cv'), async (req, res) => 
         await Promise.all([
           sendEmail({
             to:      email,
-            subject: 'Xác nhận nhận hồ sơ ứng tuyển — Việt Hương Ceramics',
+            subject: 'Xác nhận nhận hồ sơ ứng tuyển — Viet Huong Ceramics',
             html:    candidateEmailHtml({ fullName: full_name, position, experience: experience || '', phone, address: address || '', cvFile }),
-            fromName: 'Việt Hương Ceramics',
+            fromName: 'Viet Huong Ceramics',
           }).then(() => console.log('[EMAIL OK] Ứng viên:', email))
             .catch(err => console.error('[EMAIL LỖI] Ứng viên:', err.message)),
 
@@ -432,7 +432,7 @@ router.post('/manual', authMiddleware, upload.single('cv'), async (req, res) => 
             to:          process.env.HR_MAIL,
             subject:     `[Ứng tuyển mới] ${full_name} — ${position}`,
             html:        hrEmailHtml({ fullName: full_name, email, phone, position, experience: experience || '', address: address || '', coverLetter: cover_letter || '', cvFile }),
-            fromName:    'Việt Hương Ceramics',
+            fromName:    'Viet Huong Ceramics',
             attachments: cvFile ? [{ filename: cvFile.originalname, path: cvFile.path }] : [],
           }).then(() => console.log('[EMAIL OK] HR:', process.env.HR_MAIL))
             .catch(err => console.error('[EMAIL LỖI] HR:', err.message)),

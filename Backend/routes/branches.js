@@ -3,13 +3,10 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
-
-// ✅ SỬA DÒNG NÀY
-const { authMiddleware } = require('./auth'); // ← Từ '../middleware/auth' → './auth'
+const { authMiddleware } = require('./auth');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-// ── Upload ảnh lên Cloudinary ──────────────────────────────────
 async function uploadToCloudinary(buffer) {
   return new Promise((resolve, reject) => {
     cloudinary.uploader.upload_stream(
@@ -19,21 +16,36 @@ async function uploadToCloudinary(buffer) {
   });
 }
 
-// ── GET /api/branches — public ─────────────────────────────────
+// Helper kiểm tra kết nối DB
+function checkDb(req, res) {
+  if (!req.db || typeof req.db.query !== 'function') {
+    console.error('❌ req.db not available');
+    throw new Error('Database connection not initialized');
+  }
+}
+
+// ─── GET /api/branches (public) ─────────────────────────────────
 router.get('/', async (req, res) => {
   try {
+    checkDb(req);
     const [rows] = await req.db.query(
       'SELECT * FROM branches ORDER BY sort_order ASC, id ASC'
     );
-    res.json(rows);
+    // ✅ Luôn trả về mảng, kể cả khi rows là null/undefined
+    res.json(rows || []);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('[GET /api/branches] ERROR:', err);
+    res.status(500).json({ 
+      message: 'Lỗi server khi lấy danh sách chi nhánh',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
-// ── GET /api/branches/:id — public ────────────────────────────
+// ─── GET /api/branches/:id (public) ────────────────────────────
 router.get('/:id', async (req, res) => {
   try {
+    checkDb(req);
     const [rows] = await req.db.query(
       'SELECT * FROM branches WHERE id = ?',
       [req.params.id]
@@ -41,13 +53,18 @@ router.get('/:id', async (req, res) => {
     if (!rows.length) return res.status(404).json({ message: 'Không tìm thấy chi nhánh' });
     res.json(rows[0]);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('[GET /api/branches/:id] ERROR:', err);
+    res.status(500).json({ 
+      message: 'Lỗi server khi lấy chi nhánh',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
-// ── POST /api/branches — admin only ───────────────────────────
+// ─── POST /api/branches (admin only) ───────────────────────────
 router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
   try {
+    checkDb(req);
     const { name, address, email, phone, lat, lng, sort_order } = req.body;
 
     if (!name || !name.trim()) {
@@ -81,13 +98,18 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
     );
     res.status(201).json(newRows[0]);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('[POST /api/branches] ERROR:', err);
+    res.status(500).json({ 
+      message: 'Lỗi server khi tạo chi nhánh',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
-// ── PUT /api/branches/:id — admin only ────────────────────────
+// ─── PUT /api/branches/:id (admin only) ────────────────────────
 router.put('/:id', authMiddleware, upload.single('image'), async (req, res) => {
   try {
+    checkDb(req);
     const { id } = req.params;
     const { name, address, email, phone, lat, lng, sort_order } = req.body;
 
@@ -133,13 +155,18 @@ router.put('/:id', authMiddleware, upload.single('image'), async (req, res) => {
     );
     res.json(updated[0]);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('[PUT /api/branches/:id] ERROR:', err);
+    res.status(500).json({ 
+      message: 'Lỗi server khi cập nhật chi nhánh',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
-// ── DELETE /api/branches/:id — admin only ─────────────────────
+// ─── DELETE /api/branches/:id (admin only) ─────────────────────
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
+    checkDb(req);
     const [existing] = await req.db.query(
       'SELECT * FROM branches WHERE id = ?', [req.params.id]
     );
@@ -150,7 +177,11 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     await req.db.query('DELETE FROM branches WHERE id = ?', [req.params.id]);
     res.json({ message: 'Đã xóa thành công', deleted: existing[0] });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('[DELETE /api/branches/:id] ERROR:', err);
+    res.status(500).json({ 
+      message: 'Lỗi server khi xóa chi nhánh',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
