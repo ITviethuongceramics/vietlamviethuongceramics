@@ -145,7 +145,6 @@ export default function ApplicationsManager({ token }) {
       
       showConfirm('Gửi email thông báo không đạt cho ứng viên?', async () => {
         hideConfirm();
-        // Gửi email ở chế độ background – KHÔNG await để không làm chậm cập nhật trạng thái
         sendRejectionEmail(appToReject).catch(err => console.error('Lỗi gửi email từ chối:', err));
         await doUpdate(id, status, note);
       });

@@ -418,6 +418,7 @@ $gray-light: #e8e3e0;
     border-radius: 24px;
     overflow: hidden;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    margin-bottom: 210px;
 
     img {
       width: 100%;
@@ -681,5 +682,17 @@ $gray-light: #e8e3e0;
   &__icon {
     color: $red;
     opacity: 0.95;
+  }
+}
+@font-face {
+  font-family: 'UTM-Avo';
+  src: url('../assets/fonts/UTM-Avo.ttf') format('truetype');
+}
+
+.about-page {
+  font-family: 'UTM-Avo', sans-serif;
+
+  h1, h2, h3, h4, p, span, li, button, a {
+    font-family: 'UTM-Avo', sans-serif;
   }
 }

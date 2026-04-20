@@ -1,4 +1,11 @@
 .cp {
+  font-family: 'UTM-Avo', sans-serif;
+
+  h1, h2, h3, h4, p, span, li, button, a {
+    font-family: 'UTM-Avo', sans-serif;
+  }
+}
+.cp {
   min-height: 100vh;
   background: #f7f4f2;
 }

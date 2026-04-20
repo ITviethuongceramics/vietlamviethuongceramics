@@ -17,10 +17,6 @@ export default function AdminDashboard() {
     }
   }, [token, navigate]);
 
-  // Các hàm fetch dùng chung có thể truyền xuống nếu cần,
-  // nhưng JobsManager và ApplicationsManager sẽ tự gọi API riêng
-  // để tránh truyền quá nhiều props.
-
   return (
     <div className="adm">
       <aside className="adm-sidebar">

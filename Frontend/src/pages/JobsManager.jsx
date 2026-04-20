@@ -16,9 +16,9 @@ export default function JobsManager({ token }) {
   const [departmentMode, setDepartmentMode] = useState('select');
 
   const emptyForm = {
-    title: '', department: '', location: '', type: '',
-    experience: '', salary: '', description: '',
-    requirements: '', benefits: '', deadline: '', status: 'active'
+    title: '', department: '', location: '', locations: [],
+    customLocation: '', type: '', experience: '', salary: '',
+    description: '', requirements: '', benefits: '', deadline: '', status: 'active'
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -41,22 +41,31 @@ export default function JobsManager({ token }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    const url = editJob
-      ? `${import.meta.env.VITE_API_URL}/jobs/${editJob.id}`
-      : `${import.meta.env.VITE_API_URL}/jobs`;
-    await fetch(url, {
-      method: editJob ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify(form),
-    });
+    const locations = form.locations?.length > 0 ? form.locations : [form.location || ''];
+
+    if (editJob) {
+      // Sửa: chỉ cập nhật 1 tin
+      await fetch(`${import.meta.env.VITE_API_URL}/jobs/${editJob.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ...form, location: locations[0] }),
+      });
+    } else {
+      // Thêm mới: đăng song song cho từng địa điểm
+      await Promise.all(locations.map(loc =>
+        fetch(`${import.meta.env.VITE_API_URL}/jobs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ ...form, location: loc }),
+        })
+      ));
+    }
+
     setShowForm(false);
     setEditJob(null);
     setForm(emptyForm);
-    setLocationMode('select');
-    setDepartmentMode('select');
     fetchJobs();
   }
-
   async function handleDelete(id) {
     if (!confirm('Xóa tin tuyển dụng này?')) return;
     await fetch(`${import.meta.env.VITE_API_URL}/jobs/${id}`, {
@@ -69,7 +78,7 @@ export default function JobsManager({ token }) {
   function handleEdit(job) {
     setEditJob(job);
     setForm({ ...job, deadline: job.deadline ? job.deadline.split('T')[0] : '' });
-    
+
     // Check location mode
     const standardLocations = ['Đà Nẵng', 'Hải Phòng', 'Hồ Chí Minh'];
     if (job.location && !standardLocations.includes(job.location)) {
@@ -77,7 +86,7 @@ export default function JobsManager({ token }) {
     } else {
       setLocationMode('select');
     }
-    
+
     // Check department mode
     const standardDepartments = ['Kinh doanh', 'Marketing', 'Kế toán - Tài chính', 'Nhân sự', 'Kỹ thuật - Sản xuất', 'Logistics', 'IT', 'Hành chính', 'Ban Giám Đốc'];
     if (job.department && !standardDepartments.includes(job.department)) {
@@ -85,7 +94,7 @@ export default function JobsManager({ token }) {
     } else {
       setDepartmentMode('select');
     }
-    
+
     setShowForm(true);
   }
 
@@ -136,7 +145,7 @@ export default function JobsManager({ token }) {
         </button>
         {getPageNumbers(page, total).map((p, idx) =>
           p === '...' ? <span key={`e${idx}`} className="adm-pagination__ellipsis">...</span>
-          : <button key={p} className={`adm-pagination__btn ${page === p ? 'adm-pagination__btn--active' : ''}`} onClick={() => onChange(p)}>{p}</button>
+            : <button key={p} className={`adm-pagination__btn ${page === p ? 'adm-pagination__btn--active' : ''}`} onClick={() => onChange(p)}>{p}</button>
         )}
         <button className="adm-pagination__btn adm-pagination__btn--nav" onClick={() => onChange(page + 1)} disabled={page === total}>
           <ChevronRight size={15} />
@@ -169,18 +178,18 @@ export default function JobsManager({ token }) {
             <div className="adm-form__grid">
               <div className="adm-field">
                 <label>Vị trí tuyển dụng <span>*</span></label>
-                <input 
-                  value={form.title} 
-                  onChange={e => setForm({ ...form, title: e.target.value })} 
-                  required 
-                  placeholder="VD: Nhân viên kinh doanh" 
+                <input
+                  value={form.title}
+                  onChange={e => setForm({ ...form, title: e.target.value })}
+                  required
+                  placeholder="VD: Nhân viên kinh doanh"
                 />
               </div>
 
               <div className="adm-field">
                 <label>Phòng ban</label>
                 <div className="adm-select-wrap">
-                  <select 
+                  <select
                     value={departmentMode === 'custom' ? 'other' : form.department}
                     onChange={e => {
                       if (e.target.value === 'other') {
@@ -207,48 +216,91 @@ export default function JobsManager({ token }) {
                   <ChevronDown size={14} />
                 </div>
                 {departmentMode === 'custom' && (
-                  <input 
-                    style={{ marginTop: 8 }} 
-                    value={form.department} 
-                    onChange={e => setForm({ ...form, department: e.target.value })} 
-                    placeholder="Nhập tên phòng ban..." 
-                    autoFocus 
+                  <input
+                    style={{ marginTop: 8 }}
+                    value={form.department}
+                    onChange={e => setForm({ ...form, department: e.target.value })}
+                    placeholder="Nhập tên phòng ban..."
+                    autoFocus
                   />
                 )}
               </div>
 
               <div className="adm-field">
-                <label>Địa điểm</label>
-                <div className="adm-select-wrap">
-                  <select 
-                    value={locationMode === 'custom' ? 'other' : form.location} 
-                    onChange={e => {
-                      if (e.target.value === 'other') { 
-                        setLocationMode('custom'); 
-                        setForm({ ...form, location: '' }); 
-                      } else { 
-                        setLocationMode('select'); 
-                        setForm({ ...form, location: e.target.value }); 
-                      }
-                    }}
-                  >
-                    <option value="">Chọn địa điểm</option>
-                    <option>Đà Nẵng</option>
-                    <option>Hải Phòng</option>
-                    <option>Hồ Chí Minh</option>
-                    <option value="other">Khác...</option>
-                  </select>
-                  <ChevronDown size={14} />
+                <label>Địa điểm (chọn nhiều)</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 16px', border: '1px solid #e5e7eb', borderRadius: 8, background: '#fafafa' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                    {['Đà Nẵng', 'Hải Phòng', 'Hồ Chí Minh', 'Hà Nội', 'Quảng Nam'].map(loc => (
+                      <label key={loc} style={{
+                        display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+                        fontSize: 13, padding: '8px 12px', borderRadius: 8,
+                        border: `1.5px solid ${(form.locations || []).includes(loc) ? '#C0392B' : '#e5e7eb'}`,
+                        background: (form.locations || []).includes(loc) ? '#fdf5f4' : '#fff',
+                        color: (form.locations || []).includes(loc) ? '#C0392B' : '#374151',
+                        fontWeight: (form.locations || []).includes(loc) ? 600 : 400,
+                        transition: 'all 0.15s',
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={(form.locations || []).includes(loc)}
+                          onChange={e => {
+                            const prev = form.locations || [];
+                            setForm({
+                              ...form,
+                              locations: e.target.checked
+                                ? [...prev, loc]
+                                : prev.filter(l => l !== loc)
+                            });
+                          }}
+                          style={{ accentColor: '#C0392B', width: 15, height: 15 }}
+                        />
+                        {loc}
+                      </label>
+                    ))}
+                  </div>
+
+                  {/* Địa điểm tùy chỉnh */}
+                  <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 10, marginTop: 4 }}>
+                    <input
+                      placeholder="+ Thêm địa điểm khác (nhấn Enter)..."
+                      value={form.customLocation || ''}
+                      onChange={e => setForm({ ...form, customLocation: e.target.value })}
+                      style={{
+                        width: '100%', padding: '8px 12px', border: '1px dashed #e5e7eb',
+                        borderRadius: 8, fontSize: 13, boxSizing: 'border-box',
+                        background: '#fff', outline: 'none',
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && form.customLocation?.trim()) {
+                          e.preventDefault();
+                          setForm({
+                            ...form,
+                            locations: [...(form.locations || []), form.customLocation.trim()],
+                            customLocation: ''
+                          });
+                        }
+                      }}
+                    />
+                  </div>
+                  {(form.locations || []).length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {form.locations.map(loc => (
+                        <span key={loc} style={{
+                          background: '#C0392B', color: '#fff',
+                          borderRadius: 20, padding: '4px 12px', fontSize: 12,
+                          display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500,
+                        }}>
+                          {loc}
+                          <button type="button"
+                            onClick={() => setForm({ ...form, locations: form.locations.filter(l => l !== loc) })}
+                            style={{ background: 'rgba(255,255,255,0.3)', border: 'none', cursor: 'pointer', color: '#fff', padding: '0 2px', fontSize: 14, lineHeight: 1, borderRadius: '50%', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {locationMode === 'custom' && (
-                  <input 
-                    style={{ marginTop: 8 }} 
-                    value={form.location} 
-                    onChange={e => setForm({ ...form, location: e.target.value })} 
-                    placeholder="Nhập địa điểm..." 
-                    autoFocus 
-                  />
-                )}
               </div>
 
               <div className="adm-field">
@@ -280,19 +332,19 @@ export default function JobsManager({ token }) {
 
               <div className="adm-field">
                 <label>Mức lương</label>
-                <input 
-                  value={form.salary} 
-                  onChange={e => setForm({ ...form, salary: e.target.value })} 
-                  placeholder="VD: 8-12 triệu" 
+                <input
+                  value={form.salary}
+                  onChange={e => setForm({ ...form, salary: e.target.value })}
+                  placeholder="VD: 8-12 triệu"
                 />
               </div>
 
               <div className="adm-field">
                 <label>Hạn nộp hồ sơ</label>
-                <input 
-                  type="date" 
-                  value={form.deadline} 
-                  onChange={e => setForm({ ...form, deadline: e.target.value })} 
+                <input
+                  type="date"
+                  value={form.deadline}
+                  onChange={e => setForm({ ...form, deadline: e.target.value })}
                 />
               </div>
 
@@ -310,38 +362,38 @@ export default function JobsManager({ token }) {
 
             <div className="adm-field adm-field--full">
               <label>Mô tả công việc</label>
-              <textarea 
-                rows={5} 
-                value={form.description} 
-                onChange={e => setForm({ ...form, description: e.target.value })} 
-                placeholder="Mô tả chi tiết công việc..." 
+              <textarea
+                rows={5}
+                value={form.description}
+                onChange={e => setForm({ ...form, description: e.target.value })}
+                placeholder="Mô tả chi tiết công việc..."
               />
             </div>
 
             <div className="adm-field adm-field--full">
               <label>Yêu cầu</label>
-              <textarea 
-                rows={5} 
-                value={form.requirements} 
-                onChange={e => setForm({ ...form, requirements: e.target.value })} 
-                placeholder="Yêu cầu ứng viên..." 
+              <textarea
+                rows={5}
+                value={form.requirements}
+                onChange={e => setForm({ ...form, requirements: e.target.value })}
+                placeholder="Yêu cầu ứng viên..."
               />
             </div>
 
             <div className="adm-field adm-field--full">
               <label>Quyền lợi</label>
-              <textarea 
-                rows={5} 
-                value={form.benefits} 
-                onChange={e => setForm({ ...form, benefits: e.target.value })} 
-                placeholder="Quyền lợi được hưởng..." 
+              <textarea
+                rows={5}
+                value={form.benefits}
+                onChange={e => setForm({ ...form, benefits: e.target.value })}
+                placeholder="Quyền lợi được hưởng..."
               />
             </div>
 
             <div className="adm-form__actions">
-              <button 
-                type="button" 
-                className="adm-btn adm-btn--ghost" 
+              <button
+                type="button"
+                className="adm-btn adm-btn--ghost"
                 onClick={handleCloseForm}
               >
                 <X size={15} /> Hủy
@@ -410,16 +462,16 @@ export default function JobsManager({ token }) {
                       </td>
                       <td>
                         <div className="adm-table__actions">
-                          <button 
-                            className="adm-icon-btn adm-icon-btn--blue" 
-                            onClick={() => handleEdit(job)} 
+                          <button
+                            className="adm-icon-btn adm-icon-btn--blue"
+                            onClick={() => handleEdit(job)}
                             title="Sửa"
                           >
                             <Pencil size={14} />
                           </button>
-                          <button 
-                            className="adm-icon-btn adm-icon-btn--red" 
-                            onClick={() => handleDelete(job.id)} 
+                          <button
+                            className="adm-icon-btn adm-icon-btn--red"
+                            onClick={() => handleDelete(job.id)}
                             title="Xóa"
                           >
                             <Trash2 size={14} />
@@ -437,13 +489,13 @@ export default function JobsManager({ token }) {
             <span className="adm-table-footer__count">
               Hiển thị {jobs.length === 0 ? 0 : Math.min((jobPage - 1) * JOBS_PER_PAGE + 1, jobs.length)}–{Math.min(jobPage * JOBS_PER_PAGE, jobs.length)} / {jobs.length} tin
             </span>
-            <Pagination 
-              page={jobPage} 
-              total={jobTotalPages} 
-              onChange={p => { 
-                setJobPage(p); 
-                window.scrollTo({ top: 0, behavior: 'smooth' }); 
-              }} 
+            <Pagination
+              page={jobPage}
+              total={jobTotalPages}
+              onChange={p => {
+                setJobPage(p);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
             />
           </div>
         </>

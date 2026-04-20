@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import logo from '../assets/logo.jpg';
 import './AdminUsersPage.scss';
+import { Image } from 'lucide-react'; // thêm vào import lucide hiện có
+import ImagesManager from './ImagesManager'; // thêm dòng này
 
 const API = import.meta.env.VITE_API_URL;
 
@@ -41,13 +43,21 @@ function ImageUploadField({ value, onChange }) {
   const [preview, setPreview] = useState(value || '');
 
   useEffect(() => { setPreview(value || ''); }, [value]);
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
 
-  function handleFile(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    onChange(file);
-    setPreview(URL.createObjectURL(file));
+  // ✅ Kiểm tra HEIC
+  const name = file.name.toLowerCase();
+  if (name.endsWith('.heic') || name.endsWith('.heif')) {
+    alert('Định dạng HEIC/HEIF không được hỗ trợ.\nVui lòng chuyển ảnh sang JPG hoặc PNG trước khi upload.');
+    e.target.value = '';
+    return;
   }
+
+  onChange(file);
+  setPreview(URL.createObjectURL(file));
+}
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -167,18 +177,36 @@ function BranchesTab({ token }) {
     setSaving(false);
   }
 
-  async function handleEdit() {
-    if (!form.name.trim()) return setError('Vui lòng nhập tên chi nhánh.');
-    setSaving(true);
-    try {
-      const res  = await fetch(`${API}/branches/${selected.id}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: buildFormData() });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      await fetchBranches(); closeModal();
-    } catch (err) { setError(err.message); }
-    setSaving(false);
-  }
+ async function handleEdit() {
+  setSaving(true);
+  try {
+    const body = {};
+    if (form.password.trim()) {
+      body.password = form.password;
+    } else {
+      // Không nhập pass → không đổi gì → đóng modal luôn
+      closeModal();
+      setSaving(false);
+      return;
+    }
 
+    const res = await fetch(`${API}/auth/users/${selected.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message);
+    await fetchUsers();
+    closeModal();
+  } catch (err) {
+    setError(err.message);
+  }
+  setSaving(false);
+}
   async function handleDelete() {
     setSaving(true);
     try {
@@ -323,41 +351,40 @@ function BranchesTab({ token }) {
     </>
   );
 }
-
-// ──────────────────────────────────────────────────────────────
-//  TAB 2: QUẢN LÝ NỘI DUNG GIỚI THIỆU (About)
-// ──────────────────────────────────────────────────────────────
 function AboutTab({ token }) {
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving]   = useState(false);
-  const [error, setError]     = useState('');
-  const [success, setSuccess] = useState('');
+  const [loading, setLoading]         = useState(true);
+  const [saving, setSaving]           = useState(false);
+  const [error, setError]             = useState('');
+  const [success, setSuccess]         = useState('');
+  const [introImageFile, setIntroImageFile]     = useState(null); // ← FIX: thiếu
+  const [missionImageFile, setMissionImageFile] = useState(null); // ← FIX: thiếu
+  // Thêm state này cạnh các state khác
+const [visionImageFile, setVisionImageFile] = useState(null);
 
   const [content, setContent] = useState({
     stats: [
       { value: '10+', label: 'Năm kinh nghiệm' },
       { value: '500+', label: 'Đối tác tin cậy' },
       { value: '5K+', label: 'Dự án hoàn thành' },
-      { value: '10+', label: 'Quốc gia xuất khẩu' }
+      { value: '10+', label: 'Quốc gia xuất khẩu' },
     ],
-    intro_eyebrow: 'Giới thiệu',
-    intro_heading: 'GIỚI THIỆU VIET HUONG CERAMICS',
+    intro_eyebrow:      'Giới thiệu',
+    intro_heading:      'GIỚI THIỆU VIET HUONG CERAMICS',
     intro_heading_span: 'DOANH NGHIỆP "SAO VÀNG ĐẤT VIỆT" 2024',
-    intro_text1: '',
-    intro_text2: '',
-    intro_text3: '',
-    intro_pill: 'Tiên phong · Minh bạch · Bền vững',
-    intro_image_url: '',
-    vision_title: 'Tầm Nhìn',
-    vision_points: [],
-    mission_title: 'Sứ Mệnh',
-    mission_text: '',
-    mission_image_url: '',
+    intro_text1:        '',
+    intro_text2:        '',
+    intro_text3:        '',
+    intro_pill:         'Tiên phong · Minh bạch · Bền vững',
+    intro_image_url:    '',
+    vision_title:       'Tầm Nhìn',
+    vision_points:      [],
+    mission_title:      'Sứ Mệnh',
+    mission_text:       '',
+    mission_image_url:  '',
+     vision_image_url: '',
   });
 
-  const [introImageFile, setIntroImageFile] = useState(null);
-  const [missionImageFile, setMissionImageFile] = useState(null);
-
+  // ← FIX: thiếu hoàn toàn useEffect fetch data
   useEffect(() => {
     fetch(`${API}/about`)
       .then(res => res.json())
@@ -365,163 +392,220 @@ function AboutTab({ token }) {
         if (data && Object.keys(data).length) {
           setContent(prev => ({
             ...prev,
-            stats: data.stats || prev.stats,
-            intro_eyebrow: data.intro_eyebrow || prev.intro_eyebrow,
-            intro_heading: data.intro_heading || prev.intro_heading,
-            intro_heading_span: data.intro_heading_span || prev.intro_heading_span,
-            intro_text1: data.intro_text1 || prev.intro_text1,
-            intro_text2: data.intro_text2 || prev.intro_text2,
-            intro_text3: data.intro_text3 || prev.intro_text3,
-            intro_pill: data.intro_pill || prev.intro_pill,
-            intro_image_url: data.intro_image_url || prev.intro_image_url,
-            vision_title: data.vision_title || prev.vision_title,
-            vision_points: data.vision_points || prev.vision_points,
-            mission_title: data.mission_title || prev.mission_title,
-            mission_text: data.mission_text || prev.mission_text,
-            mission_image_url: data.mission_image_url || prev.mission_image_url,
+            ...data,
+            stats:         Array.isArray(data.stats)         ? data.stats         : prev.stats,
+            vision_points: Array.isArray(data.vision_points) ? data.vision_points : prev.vision_points,
           }));
         }
-        setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {}) // lỗi network → giữ default
+      .finally(() => setLoading(false)); // ← QUAN TRỌNG: luôn tắt loading
   }, []);
 
-  const updateStat = (idx, field, value) => {
+  // ← FIX: thiếu 2 hàm helper
+  function updateStat(idx, field, value) {
     const newStats = [...content.stats];
-    newStats[idx][field] = value;
-    setContent({ ...content, stats: newStats });
-  };
+    newStats[idx] = { ...newStats[idx], [field]: value };
+    setContent(c => ({ ...c, stats: newStats }));
+  }
 
-  const updateVisionPoints = (text) => {
-    const points = text.split('\n').filter(line => line.trim() !== '');
-    setContent({ ...content, vision_points: points });
-  };
+  function updateVisionPoints(text) {
+    const points = text.split('\n'); // giữ dòng trống để user edit thoải mái
+    setContent(c => ({ ...c, vision_points: points }));
+  }
 
-  const handleSave = async () => {
-    setSaving(true); setError(''); setSuccess('');
+const handleSave = async () => {
+  setSaving(true); setError(''); setSuccess('');
+  try {
+    // ✅ Dùng FormData thay vì JSON.stringify
     const formData = new FormData();
-    formData.append('stats', JSON.stringify(content.stats));
-    formData.append('intro_eyebrow', content.intro_eyebrow);
-    formData.append('intro_heading', content.intro_heading);
-    formData.append('intro_heading_span', content.intro_heading_span);
-    formData.append('intro_text1', content.intro_text1);
-    formData.append('intro_text2', content.intro_text2);
-    formData.append('intro_text3', content.intro_text3);
-    formData.append('intro_pill', content.intro_pill);
-    formData.append('vision_title', content.vision_title);
-    formData.append('vision_points', JSON.stringify(content.vision_points));
-    formData.append('mission_title', content.mission_title);
-    formData.append('mission_text', content.mission_text);
-    if (introImageFile) formData.append('intro_image', introImageFile);
-    else if (content.intro_image_url) formData.append('intro_image_url', content.intro_image_url);
-    if (missionImageFile) formData.append('mission_image', missionImageFile);
-    else if (content.mission_image_url) formData.append('mission_image_url', content.mission_image_url);
 
-    try {
-      const res = await fetch(`${API}/about`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Cập nhật thất bại');
-      setSuccess('Cập nhật thành công!');
-      setTimeout(() => setSuccess(''), 3000);
-      // Tải lại dữ liệu mới
-      const reloadRes = await fetch(`${API}/about`);
-      const reloadData = await reloadRes.json();
-      if (reloadData) setContent(reloadData);
-      setIntroImageFile(null);
-      setMissionImageFile(null);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
+    formData.append('stats',              JSON.stringify(content.stats));
+    formData.append('vision_points',      JSON.stringify(content.vision_points.filter(p => p.trim() !== '')));
+    formData.append('intro_eyebrow',      content.intro_eyebrow      ?? '');
+    formData.append('intro_heading',      content.intro_heading      ?? '');
+    formData.append('intro_heading_span', content.intro_heading_span ?? '');
+    formData.append('intro_text1',        content.intro_text1        ?? '');
+    formData.append('intro_text2',        content.intro_text2        ?? '');
+    formData.append('intro_text3',        content.intro_text3        ?? '');
+    formData.append('intro_pill',         content.intro_pill         ?? '');
+    formData.append('vision_title',       content.vision_title       ?? '');
+    formData.append('mission_title',      content.mission_title      ?? '');
+    formData.append('mission_text',       content.mission_text       ?? '');
+
+    // ✅ Nếu có file mới thì append File, không thì giữ URL cũ
+    if (introImageFile)
+      formData.append('intro_image',   introImageFile);
+    else if (content.intro_image_url)
+      formData.append('intro_image_url', content.intro_image_url);
+
+    if (missionImageFile)
+      formData.append('mission_image', missionImageFile);
+    else if (content.mission_image_url)
+      formData.append('mission_image_url', content.mission_image_url);
+
+    if (visionImageFile)
+      formData.append('vision_image',  visionImageFile);
+    else if (content.vision_image_url)
+      formData.append('vision_image_url', content.vision_image_url);
+
+    const res = await fetch(`${API}/about`, {
+      method: 'PUT',
+      // ✅ KHÔNG thêm Content-Type — để browser tự set boundary cho multipart
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Cập nhật thất bại');
+
+    setSuccess('Cập nhật thành công!');
+    setTimeout(() => setSuccess(''), 3000);
+
+    // Reset file state
+    setIntroImageFile(null);
+    setMissionImageFile(null);
+    setVisionImageFile(null);
+
+    // Reload data mới
+    const reload = await fetch(`${API}/about`);
+    const fresh  = await reload.json();
+    if (fresh && Object.keys(fresh).length) {
+      setContent(prev => ({
+        ...prev, ...fresh,
+        stats:         Array.isArray(fresh.stats)         ? fresh.stats         : prev.stats,
+        vision_points: Array.isArray(fresh.vision_points) ? fresh.vision_points : prev.vision_points,
+      }));
     }
-  };
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setSaving(false);
+  }
+};
 
   if (loading) return <div className="adm-loading"><div className="adm-spinner" /> Đang tải...</div>;
 
-  return (
-    <div style={{ padding: '0 0 20px' }}>
-      <div style={{ marginBottom: 24 }}>
-        <h3 style={{ fontSize: 18, fontWeight: 600, margin: '0 0 6px' }}>Nội dung trang Giới thiệu</h3>
-        <p style={{ color: '#6b7280', margin: 0 }}>Các trường dưới đây sẽ hiển thị trên trang /gioi-thieu. Để trống nếu muốn giữ nguyên nội dung mặc định.</p>
-      </div>
+ return (
+  <div style={{ padding: '0 0 20px' }}>
+    <div style={{ marginBottom: 24 }}>
+      <h3 style={{ fontSize: 18, fontWeight: 600, margin: '0 0 6px' }}>Nội dung trang Giới thiệu</h3>
+      <p style={{ color: '#6b7280', margin: 0 }}>Các trường dưới đây sẽ hiển thị trên trang /gioi-thieu.</p>
+    </div>
 
-      {/* Stats */}
-      <div style={{ marginBottom: 32 }}>
-        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, borderLeft: '4px solid #c0392b', paddingLeft: 12 }}>📊 Số liệu thống kê (4 mục)</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16 }}>
-          {content.stats.map((stat, idx) => (
-            <div key={idx} style={{ background: '#f9fafb', padding: 12, borderRadius: 12 }}>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <F label={`Giá trị ${idx+1}`} field="value" value={stat.value} onChange={(_, val) => updateStat(idx, 'value', val)} />
-                <F label={`Nhãn ${idx+1}`} field="label" value={stat.label} onChange={(_, val) => updateStat(idx, 'label', val)} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Intro */}
-      <div style={{ marginBottom: 32 }}>
-        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, borderLeft: '4px solid #c0392b', paddingLeft: 12 }}>📝 Phần Giới thiệu</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <F label="Eyebrow (dòng nhỏ)" field="intro_eyebrow" value={content.intro_eyebrow} onChange={(_, val) => setContent({...content, intro_eyebrow: val})} />
-          <F label="Heading chính" field="intro_heading" value={content.intro_heading} onChange={(_, val) => setContent({...content, intro_heading: val})} />
-          <F label="Heading phụ (span)" field="intro_heading_span" value={content.intro_heading_span} onChange={(_, val) => setContent({...content, intro_heading_span: val})} />
-          <div><label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Đoạn văn 1</label>
-            <textarea rows={4} value={content.intro_text1} onChange={e => setContent({...content, intro_text1: e.target.value})} style={{ width: '100%', marginTop: 6, padding: 10, border: '1.5px solid #e5e7eb', borderRadius: 8 }} />
+    {/* ── Stats ── */}
+    <div style={{ marginBottom: 32 }}>
+      <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, borderLeft: '4px solid #c0392b', paddingLeft: 12 }}>Số liệu thống kê</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12 }}>
+        {content.stats.map((stat, idx) => (
+          <div key={idx} style={{ background: '#f9fafb', padding: 12, borderRadius: 10, display: 'flex', gap: 12 }}>
+            <F label={`Giá trị ${idx + 1}`} field="value" value={stat.value} onChange={(_, val) => updateStat(idx, 'value', val)} />
+            <F label={`Nhãn ${idx + 1}`} field="label" value={stat.label} onChange={(_, val) => updateStat(idx, 'label', val)} />
           </div>
-          <div><label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Đoạn văn 2</label>
-            <textarea rows={4} value={content.intro_text2} onChange={e => setContent({...content, intro_text2: e.target.value})} style={{ width: '100%', marginTop: 6, padding: 10, border: '1.5px solid #e5e7eb', borderRadius: 8 }} />
-          </div>
-          <div><label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Đoạn văn 3 (có thể chứa HTML)</label>
-            <textarea rows={4} value={content.intro_text3} onChange={e => setContent({...content, intro_text3: e.target.value})} style={{ width: '100%', marginTop: 6, padding: 10, border: '1.5px solid #e5e7eb', borderRadius: 8 }} />
-          </div>
-          <F label="Pill (badge)" field="intro_pill" value={content.intro_pill} onChange={(_, val) => setContent({...content, intro_pill: val})} />
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Ảnh giới thiệu</label>
-            <ImageUploadField value={content.intro_image_url} onChange={(file) => setIntroImageFile(file)} />
-          </div>
-        </div>
-      </div>
-
-      {/* Vision */}
-      <div style={{ marginBottom: 32 }}>
-        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, borderLeft: '4px solid #c0392b', paddingLeft: 12 }}>🎯 Tầm nhìn</div>
-        <F label="Tiêu đề" field="vision_title" value={content.vision_title} onChange={(_, val) => setContent({...content, vision_title: val})} />
-        <div><label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Các điểm (mỗi dòng một điểm)</label>
-          <textarea rows={5} value={content.vision_points.join('\n')} onChange={e => updateVisionPoints(e.target.value)} style={{ width: '100%', marginTop: 6, padding: 10, border: '1.5px solid #e5e7eb', borderRadius: 8 }} />
-        </div>
-      </div>
-
-      {/* Mission */}
-      <div style={{ marginBottom: 32 }}>
-        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, borderLeft: '4px solid #c0392b', paddingLeft: 12 }}>⭐ Sứ mệnh</div>
-        <F label="Tiêu đề" field="mission_title" value={content.mission_title} onChange={(_, val) => setContent({...content, mission_title: val})} />
-        <div><label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Nội dung</label>
-          <textarea rows={4} value={content.mission_text} onChange={e => setContent({...content, mission_text: e.target.value})} style={{ width: '100%', marginTop: 6, padding: 10, border: '1.5px solid #e5e7eb', borderRadius: 8 }} />
-        </div>
-        <div style={{ marginTop: 16 }}>
-          <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Ảnh sứ mệnh</label>
-          <ImageUploadField value={content.mission_image_url} onChange={(file) => setMissionImageFile(file)} />
-        </div>
-      </div>
-
-      {error && <div style={{ margin: '16px 0', padding: 12, background: '#fef2f2', borderRadius: 8, color: '#c0392b' }}>⚠️ {error}</div>}
-      {success && <div style={{ margin: '16px 0', padding: 12, background: '#e6f7e6', borderRadius: 8, color: '#2e7d32' }}>✅ {success}</div>}
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
-        <button type="button" className="adm-btn adm-btn--primary" onClick={handleSave} disabled={saving}>
-          {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-        </button>
+        ))}
       </div>
     </div>
-  );
-}
 
+    {/* ── Phần giới thiệu ── */}
+    <div style={{ marginBottom: 32 }}>
+      <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, borderLeft: '4px solid #c0392b', paddingLeft: 12 }}>Phần giới thiệu</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <F label="Eyebrow (dòng nhỏ)" field="intro_eyebrow" value={content.intro_eyebrow} onChange={(_, val) => setContent(c => ({ ...c, intro_eyebrow: val }))} />
+        <F label="Tiêu đề chính" field="intro_heading" value={content.intro_heading} onChange={(_, val) => setContent(c => ({ ...c, intro_heading: val }))} />
+        <F label="Tiêu đề phụ" field="intro_heading_span" value={content.intro_heading_span} onChange={(_, val) => setContent(c => ({ ...c, intro_heading_span: val }))} />
+        {['intro_text1', 'intro_text2', 'intro_text3'].map((field, i) => (
+          <div key={field}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Đoạn văn {i + 1}{field === 'intro_text3' ? ' (hỗ trợ HTML)' : ''}
+            </label>
+            <textarea rows={4} value={content[field]}
+              onChange={e => setContent(c => ({ ...c, [field]: e.target.value }))}
+              style={{ width: '100%', marginTop: 6, padding: '10px 14px', fontSize: 14, border: '1.5px solid #e5e7eb', borderRadius: 8, outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+              onFocus={e => e.target.style.borderColor = '#c0392b'}
+              onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+            />
+          </div>
+        ))}
+        <F label="Badge / Pill" field="intro_pill" value={content.intro_pill} onChange={(_, val) => setContent(c => ({ ...c, intro_pill: val }))} />
+        <div>
+          <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ảnh giới thiệu</label>
+          <div style={{ marginTop: 6 }}>
+            <ImageUploadField value={content.intro_image_url} onChange={file => setIntroImageFile(file)} />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* ── Tầm nhìn ── */}
+    <div style={{ marginBottom: 32 }}>
+      <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, borderLeft: '4px solid #c0392b', paddingLeft: 12 }}>Tầm nhìn</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <F label="Tiêu đề" field="vision_title" value={content.vision_title}
+          onChange={(_, val) => setContent(c => ({ ...c, vision_title: val }))} />
+        <div>
+          <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Các điểm (mỗi dòng một điểm)
+          </label>
+          <textarea rows={5}
+            value={Array.isArray(content.vision_points) ? content.vision_points.join('\n') : ''}
+            onChange={e => updateVisionPoints(e.target.value)}
+            style={{ width: '100%', marginTop: 6, padding: '10px 14px', fontSize: 14, border: '1.5px solid #e5e7eb', borderRadius: 8, outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+            onFocus={e => e.target.style.borderColor = '#c0392b'}
+            onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+          />
+        </div>
+        {/* ── Ảnh tầm nhìn — giống hệt sứ mệnh ── */}
+        <div>
+          <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ảnh tầm nhìn</label>
+          <div style={{ marginTop: 6 }}>
+            <ImageUploadField
+              value={content.vision_image_url}
+              onChange={file => {
+                setVisionImageFile(file);
+                // Tạo preview URL tạm để ImageUploadField hiển thị
+                setContent(c => ({ ...c, vision_image_url: URL.createObjectURL(file) }));
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* ── Sứ mệnh ── */}
+    <div style={{ marginBottom: 32 }}>
+      <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, borderLeft: '4px solid #c0392b', paddingLeft: 12 }}>Sứ mệnh</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <F label="Tiêu đề" field="mission_title" value={content.mission_title}
+          onChange={(_, val) => setContent(c => ({ ...c, mission_title: val }))} />
+        <div>
+          <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nội dung</label>
+          <textarea rows={4} value={content.mission_text}
+            onChange={e => setContent(c => ({ ...c, mission_text: e.target.value }))}
+            style={{ width: '100%', marginTop: 6, padding: '10px 14px', fontSize: 14, border: '1.5px solid #e5e7eb', borderRadius: 8, outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+            onFocus={e => e.target.style.borderColor = '#c0392b'}
+            onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+          />
+        </div>
+        <div>
+          <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ảnh sứ mệnh</label>
+          <div style={{ marginTop: 6 }}>
+            <ImageUploadField value={content.mission_image_url} onChange={file => setMissionImageFile(file)} />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {error   && <div style={{ margin: '16px 0', padding: 12, background: '#fef2f2', borderRadius: 8, color: '#c0392b', fontSize: 14, border: '1px solid #fecaca' }}>{error}</div>}
+    {success && <div style={{ margin: '16px 0', padding: 12, background: '#f0fdf4', borderRadius: 8, color: '#166534', fontSize: 14, border: '1px solid #bbf7d0' }}>{success}</div>}
+
+    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
+      <button type="button" className="adm-btn adm-btn--primary" onClick={handleSave} disabled={saving}>
+        {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+      </button>
+    </div>
+  </div>
+);
+}
 // ──────────────────────────────────────────────────────────────
 //  TAB 3: QUẢN LÝ TÀI KHOẢN ADMIN (Users)
 // ──────────────────────────────────────────────────────────────
@@ -565,18 +649,24 @@ function UsersTab({ token }) {
     setSaving(false);
   }
 
-  async function handleEdit() {
-    if (!form.password.trim()) return setError('Vui lòng nhập mật khẩu mới.');
-    setSaving(true);
-    try {
-      const res  = await fetch(`${API}/auth/users/${selected.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ password: form.password }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      await fetchUsers(); closeModal();
-    } catch (err) { setError(err.message); }
-    setSaving(false);
-  }
-
+async function handleEdit() {
+  setSaving(true);
+  try {
+    const body = {};
+    if (form.password.trim()) body.password = form.password; // chỉ gửi nếu có nhập
+    // có thể thêm: body.role = form.role;
+    
+    const res = await fetch(`${API}/auth/users/${selected.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message);
+    await fetchUsers(); closeModal();
+  } catch (err) { setError(err.message); }
+  setSaving(false);
+}
   async function handleDelete() {
     setSaving(true);
     try {
@@ -727,9 +817,6 @@ function UsersTab({ token }) {
   );
 }
 
-// ──────────────────────────────────────────────────────────────
-//  MAIN DASHBOARD
-// ──────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const token    = localStorage.getItem('admin_token');
@@ -739,44 +826,53 @@ export default function AdminDashboard() {
   useEffect(() => { if (!token) navigate('/admin'); }, []);
 
   return (
-    <div className="adm">
+    <div className="adm"> 
       <aside className="adm-sidebar">
         <div className="adm-sidebar__logo">
           <img src={logo} alt="Viet Huong Ceramics" className="adm-sidebar__logo-img" />
         </div>
         <nav className="adm-sidebar__nav">
-            <button className={`adm-nav-item ${tab === 'users' ? 'adm-nav-item--active' : ''}`} onClick={() => setTab('users')}>
-                <ShieldCheck size={18} /><span>Tài khoản admin</span>
-              </button>
+
+          {/* ── Tất cả role đều thấy ── */}
+          <button className={`adm-nav-item ${tab === 'users' ? 'adm-nav-item--active' : ''}`} onClick={() => setTab('users')}>
+            <ShieldCheck size={18} /><span>Tài khoản admin</span>
+          </button>
           <button className={`adm-nav-item ${tab === 'branches' ? 'adm-nav-item--active' : ''}`} onClick={() => setTab('branches')}>
             <MapPin size={18} /><span>Chi nhánh</span>
           </button>
+
+          {/* ── Chỉ superadmin thấy ── */}
           {role === 'superadmin' && (
             <>
+            <button className={`adm-nav-item ${tab === 'images' ? 'adm-nav-item--active' : ''}`} onClick={() => setTab('images')}>
+                <Image size={18} /><span>Trang chủ</span>
+              </button>
               <button className={`adm-nav-item ${tab === 'about' ? 'adm-nav-item--active' : ''}`} onClick={() => setTab('about')}>
                 <Info size={18} /><span>Giới thiệu</span>
               </button>
-            
+              
             </>
           )}
+
         </nav>
         <button className="adm-sidebar__logout" onClick={() => { localStorage.removeItem('admin_token'); localStorage.removeItem('admin_role'); navigate('/admin'); }}>
           <LogOut size={16} /><span>Đăng xuất</span>
         </button>
       </aside>
-
       <main className="adm-main">
         <header className="adm-topbar">
           <div className="adm-topbar__title">
+            {tab === 'users'    && 'Quản lý tài khoản admin'}
             {tab === 'branches' && 'Quản lý chi nhánh'}
-            {tab === 'about' && 'Quản lý nội dung giới thiệu'}
-            {tab === 'users' && 'Quản lý tài khoản admin'}
+            {tab === 'about'    && 'Quản lý nội dung giới thiệu'}
+            {tab === 'images'   && 'Quản lý hình ảnh'}
           </div>
         </header>
         <div className="adm-content">
+          {tab === 'users'    && <UsersTab token={token} />}
           {tab === 'branches' && <BranchesTab token={token} />}
-          {tab === 'about' && <AboutTab token={token} />}
-          {tab === 'users' && <UsersTab token={token} />}
+          {tab === 'about'    && <AboutTab token={token} />}
+          {tab === 'images'   && <ImagesManager />}
         </div>
       </main>
     </div>
