@@ -11,9 +11,6 @@ import ImagesManager from './ImagesManager'; // thêm dòng này
 
 const API = import.meta.env.VITE_API_URL;
 
-// ──────────────────────────────────────────────────────────────
-//  Component hỗ trợ: Field input + Image upload (dùng chung)
-// ──────────────────────────────────────────────────────────────
 function F({ label, field, type = 'text', placeholder = '', value, onChange }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -177,36 +174,25 @@ function BranchesTab({ token }) {
     setSaving(false);
   }
 
- async function handleEdit() {
+async function handleEdit() {
+  if (!form.name.trim()) return setError('Vui lòng nhập tên chi nhánh.');
   setSaving(true);
   try {
-    const body = {};
-    if (form.password.trim()) {
-      body.password = form.password;
-    } else {
-      // Không nhập pass → không đổi gì → đóng modal luôn
-      closeModal();
-      setSaving(false);
-      return;
-    }
-
-    const res = await fetch(`${API}/auth/users/${selected.id}`, {
+    const res = await fetch(`${API}/branches/${selected.id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(body)
+      headers: { Authorization: `Bearer ${token}` },
+      body: buildFormData()
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message);
-    await fetchUsers();
+    await fetchBranches();
     closeModal();
   } catch (err) {
     setError(err.message);
   }
   setSaving(false);
 }
+
   async function handleDelete() {
     setSaving(true);
     try {
@@ -648,14 +634,11 @@ function UsersTab({ token }) {
     } catch (err) { setError(err.message); }
     setSaving(false);
   }
-
 async function handleEdit() {
   setSaving(true);
   try {
     const body = {};
-    if (form.password.trim()) body.password = form.password; // chỉ gửi nếu có nhập
-    // có thể thêm: body.role = form.role;
-    
+    if (form.password.trim()) body.password = form.password;
     const res = await fetch(`${API}/auth/users/${selected.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -663,8 +646,11 @@ async function handleEdit() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message);
-    await fetchUsers(); closeModal();
-  } catch (err) { setError(err.message); }
+    await fetchUsers();
+    closeModal();
+  } catch (err) {
+    setError(err.message);
+  }
   setSaving(false);
 }
   async function handleDelete() {
