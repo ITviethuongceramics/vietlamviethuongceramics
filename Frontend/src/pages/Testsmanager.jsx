@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import './Testsmanager.scss';
+import './TestsManager.scss';
 
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/api$/, '');
 
