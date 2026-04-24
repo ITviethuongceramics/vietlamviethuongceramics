@@ -1,3 +1,5 @@
+
+/* ===== FLOATING CONTACT ===== */
 .floating-contact {
   position: fixed;
   right: 25px;
@@ -16,7 +18,6 @@
   transition: all 0.3s;
 }
 
-/* 👇 phải viết tách ra */
 .floating-contact svg {
   background: white;
   color: #e60000;
@@ -26,7 +27,6 @@
   height: 32px;
 }
 
-/* 👇 phải viết tách ra */
 .floating-contact:hover {
   background: #c40000;
   transform: translateY(-3px);

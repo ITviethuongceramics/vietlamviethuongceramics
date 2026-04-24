@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
-import { useEffect } from 'react'; // ← thêm useEffect
+import { useEffect } from 'react';
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import JobListPage from './pages/JobListPage';
@@ -14,6 +14,8 @@ import Footer from './components/Footer';
 import { Phone } from "lucide-react";
 import AdminUsersPage from './pages/AdminUsersPage';
 import './App.css';
+import TestsManager from './pages/TestsManager';
+import CandidateTestPage, { CandidateTestListPage, CandidateResultPage } from './pages/CandidateTestPage';
 
 function FloatingContact() {
   return (
@@ -24,18 +26,16 @@ function FloatingContact() {
   );
 }
 
-// AppContent dùng useLocation
 function AppContent() {
   const location = useLocation();
 
-  // 👇 Tự động cuộn lên đầu mỗi khi đổi route
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
-  // Ẩn layout trên các trang admin/ứng tuyển
   const hideLayout =
     location.pathname.startsWith('/admin') ||
+    location.pathname.startsWith('/candidate') ||
     location.pathname.includes('/ung-tuyen');
 
   return (
@@ -54,6 +54,14 @@ function AppContent() {
         <Route path="/admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/ung-tuyen" element={<CareerApplyPage />} />
+        <Route path="/admin/tests" element={<TestsManager />} />
+
+        {/* Candidate routes */}
+        <Route path="/candidate" element={<AdminLoginPage />} />
+        <Route path="/candidate/dashboard" element={<CandidateTestListPage />} />
+        <Route path="/candidate/tests" element={<CandidateTestListPage />} />
+        <Route path="/candidate/tests/:assignment_id" element={<CandidateTestPage />} />
+        <Route path="/candidate/tests/:assignment_id/result" element={<CandidateResultPage />} />
       </Routes>
 
       {!hideLayout && <Footer />}

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, LayoutList, Users } from 'lucide-react';
+import { LogOut, LayoutList, Users, ClipboardList } from 'lucide-react';
 import './AdminDashboard.scss';
 import logo from '../assets/logo.jpg';
 import JobsManager from './JobsManager';
 import ApplicationsManager from './ApplicationsManager';
+import TestsManager from './TestsManager';
 
 export default function AdminDashboard() {
   const [tab, setTab] = useState('jobs');
@@ -16,6 +17,12 @@ export default function AdminDashboard() {
       navigate('/admin');
     }
   }, [token, navigate]);
+
+  const tabTitle = {
+    jobs:         'Tin tuyển dụng',
+    applications: 'Quản lý ứng viên',
+    tests:        'Quản lý bài test',
+  };
 
   return (
     <div className="adm">
@@ -36,6 +43,12 @@ export default function AdminDashboard() {
           >
             <Users size={18} /><span>Ứng viên</span>
           </button>
+          <button
+            className={`adm-nav-item ${tab === 'tests' ? 'adm-nav-item--active' : ''}`}
+            onClick={() => setTab('tests')}
+          >
+            <ClipboardList size={18} /><span>Bài test</span>
+          </button>
         </nav>
         <button
           className="adm-sidebar__logout"
@@ -47,13 +60,12 @@ export default function AdminDashboard() {
 
       <main className="adm-main">
         <header className="adm-topbar">
-          <div className="adm-topbar__title">
-            {tab === 'jobs' ? 'Tin tuyển dụng' : 'Quản lý ứng viên'}
-          </div>
+          <div className="adm-topbar__title">{tabTitle[tab]}</div>
         </header>
         <div className="adm-content">
-          {tab === 'jobs' && <JobsManager token={token} />}
+          {tab === 'jobs'         && <JobsManager token={token} />}
           {tab === 'applications' && <ApplicationsManager token={token} />}
+          {tab === 'tests'        && <TestsManager token={token} />}
         </div>
       </main>
     </div>

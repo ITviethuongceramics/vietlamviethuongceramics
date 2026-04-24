@@ -60,7 +60,7 @@ function handleFile(e) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {preview ? (
         <img src={preview} alt="preview"
-          style={{ width: '100%', height: 150, objectFit: 'cover', borderRadius: 10, border: '1.5px solid #e5e7eb' }} />
+          style={{ width: '100%', height: 250,objectFit: 'contain', borderRadius: 10, border: '1.5px solid #e5e7eb' }} />
       ) : (
         <div style={{
           width: '100%', height: 150, background: '#f9fafb', borderRadius: 10,

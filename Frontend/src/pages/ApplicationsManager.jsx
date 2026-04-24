@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Search, ChevronDown, X, FileText, Phone, Mail, Briefcase,
   Clock, MapPin, Eye, CheckCircle, XCircle, AlertCircle,
-  ChevronLeft, ChevronRight, Save, Plus, User, Loader, Send, Trash2
+  ChevronLeft, ChevronRight, Save, Plus, User, Loader, Send, Trash2, Calendar
 } from 'lucide-react';
 import './toast.scss';
 import { createPortal } from 'react-dom';
@@ -138,11 +138,10 @@ export default function ApplicationsManager({ token }) {
       setShowOfferModal(true);
       return;
     }
-    
+
     if (status === 'failed') {
       const appToReject = selectedApp;
       setSelectedApp(null);
-      
       showConfirm('Gửi email thông báo không đạt cho ứng viên?', async () => {
         hideConfirm();
         sendRejectionEmail(appToReject).catch(err => console.error('Lỗi gửi email từ chối:', err));
@@ -150,7 +149,7 @@ export default function ApplicationsManager({ token }) {
       });
       return;
     }
-    
+
     await doUpdate(id, status, note);
   }
 
@@ -173,7 +172,6 @@ export default function ApplicationsManager({ token }) {
     }
   }
 
-  // GỬI THƯ MỜI – HIỆN TOAST "ĐANG GỬI" NGAY LẬP TỨC
   async function sendOfferLetter() {
     if (!offerData.start_date || !offerData.salary) {
       showToast('Vui lòng điền đầy đủ thông tin bắt buộc', 'error');
@@ -194,7 +192,6 @@ export default function ApplicationsManager({ token }) {
       }
       showToast('Đã gửi thư mời nhận việc thành công!', 'success');
       setShowOfferModal(false);
-      // Cập nhật trạng thái ứng viên thành "passed"
       await fetch(`${import.meta.env.VITE_API_URL}/applications/${selectedApp.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -209,7 +206,6 @@ export default function ApplicationsManager({ token }) {
     }
   }
 
-  // GỬI EMAIL TỪ CHỐI – CŨNG HIỆN TOAST NGAY
   async function sendRejectionEmail(app) {
     setSending(true);
     showToast('⏳ Đang gửi email thông báo kết quả...', 'info');
@@ -224,7 +220,7 @@ export default function ApplicationsManager({ token }) {
         showToast(error.message || 'Không thể gửi email từ chối', 'error');
         return;
       }
-      showToast(' Đã gửi email thông báo kết quả', 'success');
+      showToast('Đã gửi email thông báo kết quả', 'success');
     } catch {
       showToast('❌ Có lỗi xảy ra khi gửi email', 'error');
     } finally {
@@ -232,11 +228,14 @@ export default function ApplicationsManager({ token }) {
     }
   }
 
-  const appStatusInfo = (status) => ({
-    pending: { label: 'Chờ xét',   cls: 'adm-badge--pending', Icon: AlertCircle },
-    passed:  { label: 'Đạt',       cls: 'adm-badge--passed',  Icon: CheckCircle },
-    failed:  { label: 'Không đạt', cls: 'adm-badge--failed',  Icon: XCircle },
-  }[status] || { label: status, cls: '', Icon: AlertCircle });
+  // ── Status config — 1 chỗ duy nhất để thêm/sửa trạng thái ──
+  const STATUS_MAP = {
+    pending:      { label: 'Chờ xét',          cls: 'adm-badge--pending',      Icon: AlertCircle },
+    interviewing: { label: 'Chờ phỏng vấn',    cls: 'adm-badge--interviewing', Icon: Calendar    },
+    passed:       { label: 'Đạt',               cls: 'adm-badge--passed',       Icon: CheckCircle },
+    failed:       { label: 'Không đạt',         cls: 'adm-badge--failed',       Icon: XCircle     },
+  };
+  const appStatusInfo = (status) => STATUS_MAP[status] || { label: status, cls: '', Icon: AlertCircle };
 
   const filteredApps = applications.filter(app => {
     if (appFilter.search) {
@@ -336,7 +335,8 @@ export default function ApplicationsManager({ token }) {
         <div className="adm-select-wrap adm-select-wrap--sm">
           <select value={appFilter.status} onChange={e => setAppFilter({ ...appFilter, status: e.target.value })}>
             <option value="">Tất cả trạng thái</option>
-            <option value="pending">Đợi phỏng vấn</option>
+            <option value="pending">Chờ xét</option>
+            <option value="interviewing">Chờ phỏng vấn</option>
             <option value="passed">Đạt</option>
             <option value="failed">Không đạt</option>
           </select>
@@ -607,13 +607,35 @@ export default function ApplicationsManager({ token }) {
                 <label>Trạng thái</label>
                 <div className="adm-select-wrap">
                   <select value={selectedApp.status} onChange={e => setSelectedApp({ ...selectedApp, status: e.target.value })}>
-                    <option value="pending">Đợi phỏng vấn</option>
+                    <option value="pending">Chờ xét</option>
+                    <option value="interviewing">Chờ phỏng vấn</option>
                     <option value="passed">Đạt</option>
                     <option value="failed">Không đạt</option>
                   </select>
                   <ChevronDown size={14} />
                 </div>
               </div>
+
+              {/* Nhắc HR: chỉ giao test khi đã chuyển sang "Chờ phỏng vấn" */}
+              {selectedApp.status === 'pending' && (
+                <div style={{
+                  background: '#fffbeb', border: '1px solid #fcd34d',
+                  borderRadius: 8, padding: '10px 14px',
+                  fontSize: 13, color: '#92400e', marginBottom: 12
+                }}>
+                  💡 Chuyển sang <strong>Chờ phỏng vấn</strong> để có thể giao bài test cho ứng viên này.
+                </div>
+              )}
+              {selectedApp.status === 'interviewing' && (
+                <div style={{
+                  background: '#eff6ff', border: '1px solid #93c5fd',
+                  borderRadius: 8, padding: '10px 14px',
+                  fontSize: 13, color: '#1e40af', marginBottom: 12
+                }}>
+                 
+                </div>
+              )}
+
               <div className="adm-field">
                 <label>Ghi chú</label>
                 <textarea rows={4} value={selectedApp.note || ''} onChange={e => setSelectedApp({ ...selectedApp, note: e.target.value })} placeholder="Nhập ghi chú..." />

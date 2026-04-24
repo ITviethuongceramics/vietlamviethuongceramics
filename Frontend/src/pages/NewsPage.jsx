@@ -21,7 +21,6 @@ function useReveal(dep) {
   const ref = useRef(null);
   useEffect(() => {
     if (!dep) return;
-    // Reset tất cả elements về trạng thái ẩn trước
     ref.current?.querySelectorAll('[data-reveal]').forEach(el => {
       el.classList.remove('is-visible');
     });
@@ -130,7 +129,7 @@ const res = await fetch(`${API_BASE}/api/rss/wordpress?category=${feed.categoryI
       <div className="news-hero">
         <div className="news-hero__overlay" />
         <div className="news-hero__content">
-          <span className="news-hero__eyebrow">Tin tức &amp; Sự kiện</span>
+          <span className="news-hero__eyebrow">Công ty cổ phần xây dựng gốm sứ Việt Hương</span>
           <h1 className="news-hero__title">Cập Nhật Mới Nhất</h1>
           <p className="news-hero__sub">Theo dõi hành trình phát triển của Viet Huong Ceramics</p>
         </div>

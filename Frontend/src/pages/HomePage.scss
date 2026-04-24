@@ -1,13 +1,13 @@
  @font-face {
-  font-family: 'UTM-Avo';
-  src: url('../assets/fonts/UTM-Avo.ttf') format('truetype');
+  font-family: 'UTM Avo';
+  src: url('../assets/fonts/UTM Avo.ttf') format('truetype');
 }
 
 .home {
-  font-family: 'UTM-Avo', sans-serif;
+  font-family: 'UTM Avo', sans-serif;
 
   h1, h2, h3, h4, p, span, li, button, a {
-    font-family: 'UTM-Avo', sans-serif;
+    font-family: 'UTM Avo', sans-serif;
   }
 }
  @keyframes waveMove {
@@ -118,7 +118,7 @@
     }
 
     h1 {
-       font-family: 'UTM-Avo', sans-serif;
+       font-family: 'UTM Avo', sans-serif;
       font-size: clamp(32px, 5.5vw, 58px);
       font-weight: 900;
       line-height: 1.1;
@@ -165,7 +165,7 @@
     }
 
     p {
-        font-family: 'UTM-Avo', sans-serif;
+        font-family: 'UTM Avo', sans-serif;
       font-size: clamp(14px, 1.6vw, 17px);
       font-weight: 500;
       color: rgba(255, 255, 255, 0.82);
@@ -177,7 +177,7 @@
 
     button {
       position: relative;
-      font-family: 'UTM-Avo', sans-serif;
+      font-family: 'UTM Avo', sans-serif;
       font-size: 13px;
       font-weight: 700;
       letter-spacing: 2px;

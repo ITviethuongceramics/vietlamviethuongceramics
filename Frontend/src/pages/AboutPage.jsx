@@ -130,7 +130,7 @@ const mission_image_url = data?.mission_image_url || 'https://viethuongceramics.
         <div className="about-hero__bg" />
         <div className="about-hero__overlay" />
         <div className="about-hero__content">
-          <p className="about-hero__sub" data-reveal>Doanh nghiệp Sao Vàng Đất Việt 2024</p>
+          <p className="about-hero__sub" data-reveal>CÔNG TY CỔ PHẦN XÂY DỰNG GỐM SỨ VIỆT HƯƠNG</p>
           <h1 className="about-hero__title" data-reveal>Viet Huong<br /><span>Ceramics</span></h1>
           <p className="about-hero__tagline" data-reveal>Chất lượng – Uy tín – Phát triển bền vững</p>
         </div>

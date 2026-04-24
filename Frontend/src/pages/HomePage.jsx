@@ -9,12 +9,12 @@ import f1 from '../assets/f1.jpg';
 import f2 from '../assets/f2.jpg';
 import f3 from '../assets/f3.jpg';
 import { useNavigate } from 'react-router-dom';
-const API = import.meta.env.VITE_API_URL;
 
+const API = import.meta.env.VITE_API_URL;
 const DEFAULT_SLIDES = [banner1, banner2, banner3, banner4];
 const DEFAULT_FEATURES = [f1, f2, f3];
-
 const DEFAULT_CONTENT = [
+  
   {
     title: 'Môi trường làm việc chuyên nghiệp',
     desc: 'Chúng tôi xây dựng một môi trường làm việc hiện đại, năng động và sáng tạo, nơi mỗi cá nhân đều được tôn trọng, khuyến khích phát triển và phát huy tối đa năng lực của mình.',
@@ -35,11 +35,11 @@ const COLORS = ['red', 'blue', 'yellow'];
 export default function HomePage() {
   const [index, setIndex] = useState(0);
   const navigate = useNavigate();
-  const [slides, setSlides] = useState(DEFAULT_SLIDES);
+  const [slides, setSlides] = useState([]);
   const [featuresImg, setFeaturesImg] = useState(DEFAULT_FEATURES);
   const [featureContent, setFeatureContent] = useState(DEFAULT_CONTENT);
+  const [loadingImages, setLoadingImages] = useState(true);
 
-  // Load ảnh từ server + text từ localStorage
   useEffect(() => {
     fetch(`${API}/images/homepage`)
       .then(r => r.json())
@@ -50,20 +50,22 @@ export default function HomePage() {
         const fKeys = ['feature1', 'feature2', 'feature3'];
         setFeaturesImg(fKeys.map((k, i) => data[k] || DEFAULT_FEATURES[i]));
       })
-      .catch(() => { }); // lỗi → giữ ảnh mặc định
+      .catch(() => {
+        setSlides(DEFAULT_SLIDES);
+        setFeaturesImg(DEFAULT_FEATURES);
+      })
+      .finally(() => setLoadingImages(false));
 
     try {
       const saved = localStorage.getItem('feature_content');
       if (saved) setFeatureContent(JSON.parse(saved));
-    } catch { }
+    } catch {}
   }, []);
 
-  // Reset index về 0 khi slides thay đổi
   useEffect(() => {
     setIndex(0);
   }, [slides]);
 
-  // Slideshow tự động
   useEffect(() => {
     if (slides.length === 0) return;
     const interval = setInterval(() => {
@@ -75,7 +77,7 @@ export default function HomePage() {
   return (
     <div className="home">
       <div className="hero">
-        {slides.map((img, i) => (
+        {!loadingImages && slides.map((img, i) => (
           <div
             key={i}
             className={`slide ${i === index ? 'active' : ''}`}

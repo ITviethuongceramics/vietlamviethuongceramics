@@ -7,7 +7,7 @@ export default function Footer() {
   return (
     <footer className="footer">
 
-      {/* 🔴 TOP */}
+  
       <div className="footer-top">
         <h2>CON NGƯỜI VIET HUONG CERAMICS</h2>
         <p>
@@ -21,12 +21,10 @@ export default function Footer() {
           </div>
           <div className="chairman-content">
             <h2>CHỦ TỊCH NGUYỄN TRUNG TRỰC</h2>
-            {/* In đậm dòng giải thưởng */}
             <p className="chairman-award">
               Chủ tịch HĐQT Viet Huong Ceramics vừa được vinh danh TOP 30 Giải thưởng
               Sao Đỏ – Doanh nhân trẻ Việt Nam tiêu biểu 2025.
             </p>
-            {/* In nghiêng, ngoặc kép, căn trái */}
             <p className="chairman-quote">
               “Khi đội ngũ trưởng thành, doanh nghiệp sẽ tự lớn. 
               Tôi đầu tư cho con người, cho văn hóa doanh nghiệp và môi trường làm việc, 
@@ -40,8 +38,6 @@ export default function Footer() {
           </div>
         </div>
       </div>
-
-      {/* 🔳 BOTTOM */}
       <div className="footer-bottom">
         <div className="footer-bottom__inner">
 
@@ -69,7 +65,6 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Cột 2 */}
           <div className="footer-col">
             <h4>VIET HUONG CERAMICS</h4>
             <ul>
@@ -89,7 +84,6 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Cột 3 */}
           <div className="footer-col">
             <h4>DỊCH VỤ HỖ TRỢ</h4>
             <ul>
@@ -109,10 +103,8 @@ export default function Footer() {
               <li><a href="tel:0898194329">Nhà máy - 0898 194 329</a></li>
             </ul>
           </div>
-
         </div>
       </div>
-
     </footer>
   );
 }
