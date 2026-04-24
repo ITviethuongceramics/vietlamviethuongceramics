@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const SibApiV3Sdk = require('@getbrevo/brevo');
+const nodemailer = require('nodemailer');
 const { uploadCV, appendToSheet } = require('../services/google');
 const { candidateEmailHtml, hrEmailHtml } = require('./email_templates');
 
@@ -21,28 +21,25 @@ function authMiddleware(req, res, next) {
   }
 }
 
-// ── BREVO API ─────────────────────────────────────────────────
-const defaultClient = SibApiV3Sdk.ApiClient.instance;
-defaultClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
-const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+// ── NODEMAILER ────────────────────────────────────────────────
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  }
+});
 
 async function sendEmail({ to, subject, html, fromName = 'VIET HUONG CERAMICS - Phòng Nhân Sự', attachments = [] }) {
-  const email = new SibApiV3Sdk.SendSmtpEmail();
-  email.sender      = { name: fromName, email: process.env.BREVO_FROM };
-  email.to          = [{ email: to }];
-  email.subject     = subject;
-  email.htmlContent = html;
-
-  if (attachments.length > 0) {
-    email.attachment = attachments
+  return transporter.sendMail({
+    from:        `"${fromName}" <${process.env.GMAIL_USER}>`,
+    to,
+    subject,
+    html,
+    attachments: attachments
       .filter(a => fs.existsSync(a.path))
-      .map(a => ({
-        name:    a.filename,
-        content: fs.readFileSync(a.path).toString('base64'),
-      }));
-  }
-
-  return apiInstance.sendTransacEmail(email);
+      .map(a => ({ filename: a.filename, path: a.path })),
+  });
 }
 
 // ── MULTER ────────────────────────────────────────────────────
@@ -99,10 +96,7 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
 
   return `<!DOCTYPE html>
 <html lang="vi">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-</head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f0eded;font-family:'Times New Roman',Georgia,serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0eded;padding:36px 0;">
   <tr><td align="center">
@@ -115,8 +109,7 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
               <table cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="padding-right:12px;vertical-align:middle;">
-                    <img src="${logoUrl}" alt="Việt Hương" width="58" height="58"
-                      style="display:block;border-radius:8px;background:#fff;padding:5px;object-fit:contain;" />
+                    <img src="${logoUrl}" alt="Việt Hương" width="58" height="58" style="display:block;border-radius:8px;background:#fff;padding:5px;object-fit:contain;" />
                   </td>
                   <td style="vertical-align:middle;">
                     <div style="color:#fff;font-family:Arial,sans-serif;font-size:13px;font-weight:700;letter-spacing:0.4px;line-height:1.4;">VIET HUONG CERAMICS</div>
@@ -194,14 +187,13 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
       <td style="background:#ffffff;padding:18px 28px;border-top:1px solid #f5e0e0;">
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
-       <td style="color:#555555;font-family:Arial,sans-serif;font-size:12px;line-height:1.9;">
+            <td style="color:#555555;font-family:Arial,sans-serif;font-size:12px;line-height:1.9;">
               <strong style="color:#B91C1C;font-size:13px;">Công ty cổ phần xây dựng gốm sứ Việt Hương</strong><br>
-              Trụ sở chính :  133 Trung Lương 14, P. Hòa Xuân, TP. Đà Nẵng<br>
-               <a href="https://viethuongceramics.com" style="color:#B91C1C;text-decoration:none;">viethuongceramics.com</a> &nbsp;|&nbsp; 0905.386.888
+              Trụ sở chính: 133 Trung Lương 14, P. Hòa Xuân, TP. Đà Nẵng<br>
+              <a href="https://viethuongceramics.com" style="color:#B91C1C;text-decoration:none;">viethuongceramics.com</a> &nbsp;|&nbsp; 0905.386.888
             </td>
             <td style="text-align:right;vertical-align:middle;">
-              <img src="${logoUrl}" width="50" height="50"
-                style="border-radius:7px;border:1px solid #f5e0e0;padding:4px;object-fit:contain;" />
+              <img src="${logoUrl}" width="50" height="50" style="border-radius:7px;border:1px solid #f5e0e0;padding:4px;object-fit:contain;" />
             </td>
           </tr>
         </table>
@@ -220,18 +212,14 @@ function getRejectionEmailHTML({ app }) {
 
   return `<!DOCTYPE html>
 <html lang="vi">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-</head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f0eded;font-family:Arial,Helvetica,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0eded;padding:36px 0;">
   <tr><td align="center">
   <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 6px 32px rgba(0,0,0,0.12);">
     <tr>
       <td style="background:#B91C1C;padding:30px 28px;text-align:center;">
-        <img src="${logoUrl}" alt="Việt Hương Ceramic" width="68" height="68"
-          style="display:block;margin:0 auto 14px;border-radius:10px;background:#fff;padding:6px;object-fit:contain;" />
+        <img src="${logoUrl}" alt="Việt Hương Ceramic" width="68" height="68" style="display:block;margin:0 auto 14px;border-radius:10px;background:#fff;padding:6px;object-fit:contain;" />
         <div style="color:#fff;font-size:19px;font-weight:700;letter-spacing:1px;">VIET HUONG CERAMICS</div>
         <div style="color:rgba(255,255,255,0.72);font-size:12px;margin-top:5px;">Công ty cổ phần xây dựng gốm sứ Việt Hương</div>
         <div style="width:50px;height:2px;background:rgba(255,255,255,0.40);margin:14px auto 0;border-radius:2px;"></div>
@@ -244,9 +232,7 @@ function getRejectionEmailHTML({ app }) {
     </tr>
     <tr>
       <td style="padding:30px 36px 16px;">
-        <p style="margin:0 0 16px;font-size:15px;color:#111;">
-          Kính gửi <strong>${h} ${app.full_name}</strong>,
-        </p>
+        <p style="margin:0 0 16px;font-size:15px;color:#111;">Kính gửi <strong>${h} ${app.full_name}</strong>,</p>
         <p style="margin:0 0 16px;font-size:14px;color:#555;line-height:1.9;">
           Trước tiên, Công ty cổ phần xây dựng gốm sứ Việt Hương xin chân thành cảm ơn ${h} đã quan tâm
           và dành thời gian ứng tuyển vào vị trí <strong style="color:#B91C1C;">${app.position}</strong> tại Công ty chúng tôi.
@@ -263,16 +249,12 @@ function getRejectionEmailHTML({ app }) {
           </tr>
         </table>
         <p style="margin:0 0 14px;font-size:14px;color:#555;line-height:1.9;">
-          Quyết định này không phản ánh năng lực của ${h} mà chỉ đơn giản là sự phù hợp
-          với yêu cầu cụ thể của vị trí tuyển dụng lần này.
+          Quyết định này không phản ánh năng lực của ${h} mà chỉ đơn giản là sự phù hợp với yêu cầu cụ thể của vị trí tuyển dụng lần này.
         </p>
         <p style="margin:0 0 14px;font-size:14px;color:#555;line-height:1.9;">
-          Chúng tôi rất trân trọng sự quan tâm của ${h} và hy vọng sẽ có cơ hội hợp tác
-          trong tương lai khi có các vị trí phù hợp hơn.
+          Chúng tôi rất trân trọng sự quan tâm của ${h} và hy vọng sẽ có cơ hội hợp tác trong tương lai khi có các vị trí phù hợp hơn.
         </p>
-        <p style="margin:0 0 26px;font-size:14px;color:#555;line-height:1.9;">
-          Chúc ${h} thành công trong sự nghiệp và tìm được công việc như ý!
-        </p>
+        <p style="margin:0 0 26px;font-size:14px;color:#555;line-height:1.9;">Chúc ${h} thành công trong sự nghiệp và tìm được công việc như ý!</p>
         <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #f5e0e0;padding-top:20px;">
           <tr>
             <td>
@@ -281,8 +263,7 @@ function getRejectionEmailHTML({ app }) {
               <div style="font-size:13px;color:#B91C1C;font-weight:700;margin-top:2px;">Công ty cổ phần xây dựng gốm sứ Việt Hương</div>
             </td>
             <td style="text-align:right;vertical-align:bottom;">
-              <img src="${logoUrl}" width="52" height="52"
-                style="border-radius:8px;border:1px solid #fde8e8;padding:4px;object-fit:contain;" />
+              <img src="${logoUrl}" width="52" height="52" style="border-radius:8px;border:1px solid #fde8e8;padding:4px;object-fit:contain;" />
             </td>
           </tr>
         </table>
@@ -290,10 +271,10 @@ function getRejectionEmailHTML({ app }) {
     </tr>
     <tr>
       <td style="background:#ffffff;padding:18px 28px;border-top:1px solid #f5e0e0;text-align:center;">
-     <div style="color:#555555;font-size:12px;line-height:1.9;font-family:Arial,sans-serif;">
+        <div style="color:#555555;font-size:12px;line-height:1.9;font-family:Arial,sans-serif;">
           <strong style="color:#B91C1C;font-size:13px;">Công ty cổ phần xây dựng gốm sứ Việt Hương</strong><br>
-           Trụ sở chính : 133 Trung Lương 14, P. Hòa Xuân, TP. Đà Nẵng<br>
-           <a href="https://viethuongceramics.com" style="color:#B91C1C;text-decoration:none;">viethuongceramics.com</a> &nbsp;|&nbsp;  0905.386.888
+          Trụ sở chính: 133 Trung Lương 14, P. Hòa Xuân, TP. Đà Nẵng<br>
+          <a href="https://viethuongceramics.com" style="color:#B91C1C;text-decoration:none;">viethuongceramics.com</a> &nbsp;|&nbsp; 0905.386.888
         </div>
       </td>
     </tr>
@@ -307,10 +288,7 @@ function getRejectionEmailHTML({ app }) {
 // ── SEND OFFER ───────────────────────────────────────────────
 router.post('/send-offer', authMiddleware, async (req, res) => {
   try {
-    const {
-      application_id, position, start_date, work_location,
-      probation_period, salary, probation_salary_percent, work_schedule
-    } = req.body;
+    const { application_id, position, start_date, work_location, probation_period, salary, probation_salary_percent, work_schedule } = req.body;
 
     const [apps] = await pool.query('SELECT * FROM applications WHERE id = ?', [application_id]);
     if (apps.length === 0) return res.status(404).json({ message: 'Không tìm thấy ứng viên' });
@@ -320,11 +298,7 @@ router.post('/send-offer', authMiddleware, async (req, res) => {
     const formattedStartDate = `${startDateTime.getHours()}h ngày ${String(startDateTime.getDate()).padStart(2, '0')}/${String(startDateTime.getMonth() + 1).padStart(2, '0')}/${startDateTime.getFullYear()}`;
     const probationSalary = Math.round(parseFloat(salary) * parseFloat(probation_salary_percent) / 100);
 
-    const emailHTML = getOfferEmailHTML({
-      app, position, formattedStartDate, work_location,
-      probation_period, salary, probation_salary_percent,
-      probationSalary, work_schedule
-    });
+    const emailHTML = getOfferEmailHTML({ app, position, formattedStartDate, work_location, probation_period, salary, probation_salary_percent, probationSalary, work_schedule });
 
     await sendEmail({
       to:      app.email,
@@ -351,9 +325,9 @@ router.post('/send-rejection', authMiddleware, async (req, res) => {
     const emailHTML = getRejectionEmailHTML({ app });
 
     await sendEmail({
-      to:      app.email,
-      subject: 'Thông báo kết quả tuyển dụng - Viet Huong Ceramics',
-      html:    emailHTML,
+      to:       app.email,
+      subject:  'Thông báo kết quả tuyển dụng - Viet Huong Ceramics',
+      html:     emailHTML,
       fromName: 'Viet Huong Ceramics - Phòng Nhân Sự',
     });
 
@@ -381,17 +355,14 @@ router.post('/manual', authMiddleware, upload.single('cv'), async (req, res) => 
   let cvLink = null;
 
   try {
-    // 1. Upload CV lên Drive trước (nếu có)
     if (cvFile) {
       try {
         cvLink = await uploadCV(cvFile.path, cvFile.originalname);
-        console.log('[UPLOAD SUCCESS] CV link:', cvLink);
       } catch (err) {
         console.error('[UPLOAD ERROR]', err.message);
       }
     }
 
-    // 2. Insert vào database
     await pool.query(
       `INSERT INTO applications 
         (id, full_name, email, phone, position, experience, address, cover_letter, cv_link, email_sent, received_at)
@@ -399,26 +370,17 @@ router.post('/manual', authMiddleware, upload.single('cv'), async (req, res) => 
       [id, full_name, email, phone, position, experience || '', address || '', cover_letter || '', cvLink]
     );
 
-    console.log('[DB SUCCESS] Application saved with ID:', id);
-
-    // 3. Response thành công ngay
     res.json({ success: true });
 
-    // 4. Background tasks
     (async () => {
       try {
-        // Ghi Google Sheets
         appendToSheet({
-          id,
-          fullName: full_name,
-          email, phone, position,
-          experience: experience || '',
-          address: address || '',
+          id, fullName: full_name, email, phone, position,
+          experience: experience || '', address: address || '',
           cvFileName: cvLink || 'Không có',
           receivedAt: new Date().toISOString(),
         }).catch(err => console.error('[SHEETS ERROR]', err.message));
 
-        // Gửi 2 mail song song
         await Promise.all([
           sendEmail({
             to:      email,
@@ -438,19 +400,8 @@ router.post('/manual', authMiddleware, upload.single('cv'), async (req, res) => 
             .catch(err => console.error('[EMAIL LỖI] HR:', err.message)),
         ]);
 
-        // Đánh dấu email đã gửi
         await pool.query('UPDATE applications SET email_sent = 1 WHERE id = ?', [id]);
-
-        // Xóa file tạm
-        if (cvFile) {
-          try {
-            fs.unlinkSync(cvFile.path);
-            console.log('[FILE CLEANUP] Deleted:', cvFile.path);
-          } catch (e) {
-            console.error('[FILE CLEANUP ERROR]', e.message);
-          }
-        }
-
+        if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch {} }
       } catch (err) {
         console.error('[MANUAL BACKGROUND ERROR]', err.message);
       }
@@ -469,17 +420,9 @@ router.get('/', authMiddleware, async (req, res) => {
     const { status, position, search, location, department } = req.query;
 
     let query = `
-      SELECT 
-        a.*,
-        j.department,
-        j.location   AS job_location,
-        j.experience AS job_experience
+      SELECT a.*, j.department, j.location AS job_location, j.experience AS job_experience
       FROM applications a
-      LEFT JOIN jobs j 
-        ON a.position = j.title
-        AND j.id = (
-          SELECT MIN(id) FROM jobs WHERE title = a.position
-        )
+      LEFT JOIN jobs j ON a.position = j.title AND j.id = (SELECT MIN(id) FROM jobs WHERE title = a.position)
       WHERE 1=1
     `;
     const params = [];
@@ -502,10 +445,7 @@ router.get('/', authMiddleware, async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const { status, note } = req.body;
-    await pool.query(
-      'UPDATE applications SET status = ?, note = ? WHERE id = ?',
-      [status, note, req.params.id]
-    );
+    await pool.query('UPDATE applications SET status = ?, note = ? WHERE id = ?', [status, note, req.params.id]);
     res.json({ message: 'Cập nhật thành công' });
   } catch (err) {
     res.status(500).json({ message: err.message });

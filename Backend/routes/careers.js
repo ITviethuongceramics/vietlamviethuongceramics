@@ -4,10 +4,11 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
-const SibApiV3Sdk = require('@getbrevo/brevo');
+
 const { candidateEmailHtml, hrEmailHtml } = require('./email_templates');
 const { uploadCV, appendToSheet } = require('../services/google');
 const pool = require('../data/db');
+const nodemailer = require('nodemailer');
 
 function authMiddleware(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
@@ -20,34 +21,34 @@ function authMiddleware(req, res, next) {
   }
 }
 
-const defaultClient = SibApiV3Sdk.ApiClient.instance;
-defaultClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
-const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  }
+});
 
 async function sendMailToCandidate({ to, subject, html }) {
-  const email = new SibApiV3Sdk.SendSmtpEmail();
-  email.sender      = { name: 'Việt Hương Ceramics', email: process.env.GMAIL_USER };
-  email.to          = [{ email: to }];
-  email.subject     = subject;
-  email.htmlContent = html;
-  return apiInstance.sendTransacEmail(email);
+  return transporter.sendMail({
+    from: `"Viet Huong Ceramics" <${process.env.GMAIL_USER}>`,
+    to,
+    subject,
+    html,
+  });
 }
 
 async function sendMailToHR({ subject, html, attachments }) {
-  const email = new SibApiV3Sdk.SendSmtpEmail();
-  email.sender = { name: 'Việt Hương Ceramics', email: process.env.GMAIL_USER };
-  email.to          = [{ email: process.env.HR_MAIL }];
-  email.subject     = subject;
-  email.htmlContent = html;
-  if (attachments && attachments.length > 0) {
-    email.attachment = attachments
-      .filter(a => fs.existsSync(a.path))
-      .map(a => ({
-        name: a.filename,
-        content: fs.readFileSync(a.path).toString('base64'),
-      }));
-  }
-  return apiInstance.sendTransacEmail(email);
+  return transporter.sendMail({
+    from:    `"Viet Huong Ceramics" <${process.env.GMAIL_USER}>`,
+    to:      process.env.HR_MAIL,
+    subject,
+    html,
+    attachments: attachments?.filter(a => fs.existsSync(a.path)).map(a => ({
+      filename: a.filename,
+      path:     a.path,
+    })),
+  });
 }
 
 const storage = multer.diskStorage({
@@ -73,7 +74,6 @@ const upload = multer({
   },
 });
 
-// ── Middleware ───────────────────────────────────────────────
 const handleUpload = (req, res, next) => {
   const contentType = req.headers['content-type'] || '';
   if (contentType.includes('multipart/form-data')) {
@@ -112,7 +112,6 @@ router.post('/apply', handleUpload, async (req, res) => {
 
   const id = Date.now();
 
-  // ✅ Lưu vào MySQL NGAY với cv_link = null
   try {
     await pool.query(
       `INSERT INTO applications 
@@ -125,10 +124,8 @@ router.post('/apply', handleUpload, async (req, res) => {
     return res.status(500).json({ success: false, message: 'Lỗi lưu dữ liệu.' });
   }
 
-  // ✅ Trả về thành công NGAY
   res.json({ success: true });
 
-  // ✅ Chạy ngầm phía sau
   (async () => {
     try {
       // 1. Upload CV
@@ -154,7 +151,7 @@ router.post('/apply', handleUpload, async (req, res) => {
       await Promise.all([
         sendMailToCandidate({
           to:      _email,
-          subject: 'Xác nhận nhận hồ sơ ứng tuyển — Việt Hương Ceramics',
+          subject: 'Xác nhận nhận hồ sơ ứng tuyển — Viet Huong Ceramics',
           html:    candidateEmailHtml({ fullName: _fullName, position: _position, experience: _experience, phone: _phone, address: _address, cvFile }),
         }).then(() => console.log('[EMAIL OK] Ứng viên:', _email))
           .catch(err => console.error('[EMAIL LỖI] Ứng viên:', err.message)),
