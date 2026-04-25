@@ -623,7 +623,7 @@ export default function ApplicationsManager({ token }) {
                   borderRadius: 8, padding: '10px 14px',
                   fontSize: 13, color: '#92400e', marginBottom: 12
                 }}>
-                  💡 Chuyển sang <strong>Chờ phỏng vấn</strong> để có thể giao bài test cho ứng viên này.
+                  
                 </div>
               )}
               {selectedApp.status === 'interviewing' && (
