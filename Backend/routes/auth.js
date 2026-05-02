@@ -96,14 +96,14 @@ router.post('/candidate/login', async (req, res) => {
       return res.status(400).json({ message: 'Thiếu email hoặc mật khẩu' });
     }
 
-    // Tìm hồ sơ ứng viên theo email
-    const [rows] = await pool.query(
-      `SELECT id, full_name, email, status, password AS hashed_pw
-       FROM applications
-       WHERE email = ?
-       LIMIT 1`,
-      [email.trim().toLowerCase()]
-    );
+ const [rows] = await pool.query(
+  `SELECT id, full_name, email, status, password AS hashed_pw
+   FROM applications
+   WHERE email = ?
+   ORDER BY received_at DESC
+   LIMIT 1`,
+  [email.trim().toLowerCase()]
+);
 
     if (!rows.length) {
       return res.status(401).json({ message: 'Email không tồn tại trong hệ thống' });
