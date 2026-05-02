@@ -23,14 +23,20 @@ function authMiddleware(req, res, next) {
 
 // ── NODEMAILER ────────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host:   'smtp.gmail.com',
+  port:   587,
+  secure: false,
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
   },
-  family: 4,
+  family:            4,
+  connectionTimeout: 10000,
+  socketTimeout:     10000,
+  tls: {
+    rejectUnauthorized: false,
+  },
 });
-
 async function sendEmail({ to, subject, html, fromName = 'VIET HUONG CERAMICS - Phòng Nhân Sự', attachments = [] }) {
   return transporter.sendMail({
     from:        `"${fromName}" <${process.env.GMAIL_USER}>`,
