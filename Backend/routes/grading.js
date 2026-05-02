@@ -4,7 +4,7 @@ const pool     = require('../data/db');
 const multer   = require('multer');
 const path     = require('path');
 const fs       = require('fs');
-const nodemailer = require('nodemailer');
+
 const { candidateMiddleware, authMiddleware } = require('./auth');
 const { gradeTextAnswer, gradeSpeakingAnswer, generateSummary } = require('../services/gradingService');
 
@@ -29,15 +29,23 @@ const upload = multer({
     else cb(new Error('Chỉ chấp nhận file audio'));
   }
 });
-
-// ── Email transporter ────────────────────────────────────────
-const transporter = nodemailer.createTransport({
-  host: 'smtp-relay.brevo.com',
-  port: 587,
-  secure: false,
-  auth: { user: process.env.BREVO_USER, pass: process.env.BREVO_PASS }
-});
-
+async function brevoSend({ to, subject, html, fromName = 'Việt Hương Ceramics - Hệ thống tuyển dụng' }) {
+  const result = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key':      process.env.BREVO_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      sender:      { name: fromName, email: process.env.BREVO_FROM },
+      to:          [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
+  });
+  if (!result.ok) throw new Error(`Brevo error: ${await result.text()}`);
+  return result.json();
+}
 // ============================================================
 // POST /api/grading/assignments/:assignment_id/speaking/:question_id
 // Ứng viên upload audio bài nói
@@ -367,13 +375,11 @@ async function notifyHR({ assignment, total_score, max_score, percentage, passed
   </div>
 </div>
 </body></html>`;
-
-  await transporter.sendMail({
-    from:    `"Việt Hương Ceramics - Hệ thống tuyển dụng" <${process.env.BREVO_USER}>`,
-    to:      process.env.HR_MAIL,
-    subject: `[Kết quả test] ${assignment.full_name} — ${assignment.test_title} — ${passed ? 'ĐẠT' : 'KHÔNG ĐẠT'} (${percentage}%)`,
-    html
-  });
+await brevoSend({
+  to:      process.env.HR_MAIL,
+  subject: `[Kết quả test] ${assignment.full_name} — ${assignment.test_title} — ${passed ? 'ĐẠT' : 'KHÔNG ĐẠT'} (${percentage}%)`,
+  html,
+});
 }
 router.get('/assignments/:assignment_id/status', authMiddleware, async (req, res) => {
   try {

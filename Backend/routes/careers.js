@@ -106,6 +106,7 @@ router.post('/apply', handleUpload, async (req, res) => {
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(_email.trim())) {
     errors.email = 'Dia chi email khong hop le.';
   }
+
   if (!_phone || !_phone.trim()) {
     errors.phone = 'Vui long nhap so dien thoai.';
   } else if (!/^[0-9+\-\s]{8,15}$/.test(_phone.trim())) {
@@ -135,7 +136,7 @@ router.post('/apply', handleUpload, async (req, res) => {
 
   (async () => {
     try {
-      // 1. Upload CV
+  
       let cvLink = null;
       if (cvFile) {
         try {
@@ -146,7 +147,7 @@ router.post('/apply', handleUpload, async (req, res) => {
         }
       }
 
-      // 2. Ghi Google Sheets
+
       appendToSheet({
         id, fullName: _fullName, email: _email, phone: _phone,
         position: _position, experience: _experience || '',
@@ -154,7 +155,7 @@ router.post('/apply', handleUpload, async (req, res) => {
         receivedAt: new Date().toISOString(),
       }).catch(err => console.error('[SHEETS ERROR]', err.message));
 
-      // 3. Gửi 2 mail song song
+     
       await Promise.all([
         sendMailToCandidate({
           to:      _email,
