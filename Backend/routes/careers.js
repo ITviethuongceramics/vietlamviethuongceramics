@@ -50,28 +50,12 @@ async function brevoSend({ to, subject, html, fromName = 'Viet Huong Ceramics', 
   if (!res.ok) throw new Error(`Brevo error: ${await res.text()}`);
   return res.json();
 }
-// XÓA 2 hàm này (dùng transporter cũ):
-
 async function sendMailToCandidate({ to, subject, html }) {
-  return transporter.sendMail({
-    from:    `"Viet Huong Ceramics" <${process.env.BREVO_FROM}>`,
-    to,
-    subject,
-    html,
-  });
+  return brevoSend({ to, subject, html });
 }
 
 async function sendMailToHR({ subject, html, attachments }) {
-  return transporter.sendMail({
-    from:    `"Viet Huong Ceramics" <${process.env.BREVO_FROM}>`,
-    to:      process.env.HR_MAIL,
-    subject,
-    html,
-    attachments: attachments?.filter(a => fs.existsSync(a.path)).map(a => ({
-      filename: a.filename,
-      path:     a.path,
-    })),
-  });
+  return brevoSend({ to: process.env.HR_MAIL, subject, html, attachments });
 }
 
 const storage = multer.diskStorage({
