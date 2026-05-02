@@ -12,11 +12,11 @@ const headers = () => ({
 
 const StatusBadge = ({ status }) => {
   const map = {
-    pending:     { label: 'Chờ làm',  cls: 'badge--pending'  },
+    pending: { label: 'Chờ làm', cls: 'badge--pending' },
     in_progress: { label: 'Đang làm', cls: 'badge--progress' },
-    submitted:   { label: 'Đã nộp',   cls: 'badge--submitted'},
-    graded:      { label: 'Đã chấm',  cls: 'badge--graded'   },
-    expired:     { label: 'Hết hạn',  cls: 'badge--expired'  },
+    submitted: { label: 'Đã nộp', cls: 'badge--submitted' },
+    graded: { label: 'Đã chấm', cls: 'badge--graded' },
+    expired: { label: 'Hết hạn', cls: 'badge--expired' },
   };
   const s = map[status] || { label: status, cls: '' };
   return <span className={`badge ${s.cls}`}>{s.label}</span>;
@@ -24,29 +24,29 @@ const StatusBadge = ({ status }) => {
 
 const typeLabel = t => ({
   excel_word: 'Excel / Word',
-  typing:     'Đánh máy',
-  english:    'Tiếng Anh',
-  chinese:    'Tiếng Trung',
-  custom:     'Tùy chỉnh',
+  typing: 'Đánh máy',
+  english: 'Tiếng Anh',
+  chinese: 'Tiếng Trung',
+  custom: 'Tùy chỉnh',
 }[t] || t);
 
 export default function TestsManager() {
-  const [tab, setTab]               = useState('tests');
-  const [tests, setTests]           = useState([]);
+  const [tab, setTab] = useState('tests');
+  const [tests, setTests] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [applications, setApplications] = useState([]);
-  const [loading, setLoading]       = useState(false);
-  const [toast, setToast]           = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState(null);
   const [lockDetail, setLockDetail] = useState(null);
 
   const [showCreateTest, setShowCreateTest] = useState(false);
-  const [showAssign, setShowAssign]         = useState(false);
-  const [selectedTest, setSelectedTest]     = useState(null);
-  const [detailTest, setDetailTest]         = useState(null);
-  const [detailResult, setDetailResult]     = useState(null);
+  const [showAssign, setShowAssign] = useState(false);
+  const [selectedTest, setSelectedTest] = useState(null);
+  const [detailTest, setDetailTest] = useState(null);
+  const [detailResult, setDetailResult] = useState(null);
 
   const [filterStatus, setFilterStatus] = useState('');
-  const [searchApp,    setSearchApp]    = useState('');
+  const [searchApp, setSearchApp] = useState('');
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -60,7 +60,7 @@ export default function TestsManager() {
       const d = await r.json();
       setTests(Array.isArray(d) ? d : []);
     } catch { showToast('Lỗi tải bộ đề', 'error'); }
-    finally  { setLoading(false); }
+    finally { setLoading(false); }
   }, []);
 
   const fetchAssignments = useCallback(async () => {
@@ -74,7 +74,7 @@ export default function TestsManager() {
       const d = await r.json();
       setAssignments(Array.isArray(d) ? d : []);
     } catch { showToast('Lỗi tải danh sách', 'error'); }
-    finally  { setLoading(false); }
+    finally { setLoading(false); }
   }, [filterStatus]);
 
   const fetchApplications = useCallback(async () => {
@@ -82,7 +82,7 @@ export default function TestsManager() {
       const r = await fetch(`${API}/api/applications`, { headers: headers() });
       const d = await r.json();
       setApplications(Array.isArray(d) ? d : []);
-    } catch {}
+    } catch { }
   }, []);
 
   useEffect(() => { fetchTests(); fetchApplications(); }, [fetchTests, fetchApplications]);
@@ -215,12 +215,20 @@ export default function TestsManager() {
               <option value="graded">Đã chấm</option>
               <option value="expired">Hết hạn</option>
             </select>
-            <button className="tm-btn tm-btn--ghost tm-btn--sm" onClick={fetchAssignments}>Làm mới</button>
+            
           </div>
 
           {loading ? <div className="tm-loading">Đang tải...</div> : (
             <div className="tm-table-wrap">
               <table className="tm-table">
+                <colgroup>
+                  <col style={{ width: '180px' }} />
+                  <col style={{ width: '350px' }} />
+                  <col style={{ width: '100px' }} />
+                  <col style={{ width: '120px' }} />
+                  <col style={{ width: '100px' }} />
+                  <col style={{ width: 'auto' }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Ứng viên</th><th>Bài test</th><th>Trạng thái</th>
@@ -254,10 +262,12 @@ export default function TestsManager() {
                           </div>
                         ) : <span className="tm-na">—</span>}
                       </td>
-                  
+
                       <td>
-                        {a.is_locked ? (
-                          <span style={{ color: '#A32D2D', fontWeight: 600, fontSize: 12 }}>🔒 {a.violation_count || 0} lần</span>
+                        {a.is_locked && a.violation_count > 0 ? (
+                          <span style={{ color: '#A32D2D', fontWeight: 600, fontSize: 12 }}>🔒 {a.violation_count} lần</span>
+                        ) : a.is_locked ? (
+                          <span style={{ color: '#A32D2D', fontWeight: 600, fontSize: 12 }}>🔒 Bị khóa</span>
                         ) : a.violation_count > 0 ? (
                           <span style={{ color: '#854F0B', fontSize: 12 }}>⚠️ {a.violation_count} lần</span>
                         ) : (
@@ -275,7 +285,7 @@ export default function TestsManager() {
                           {(a.is_locked || a.violation_count > 0) && (
                             <button className="tm-btn tm-btn--sm tm-btn--ghost" onClick={() => handleViewLock(a.id)}>🔒 Vi phạm</button>
                           )}
-                          {['pending','in_progress','submitted','graded'].includes(a.status) && (
+                          {['pending', 'in_progress', 'submitted', 'graded'].includes(a.status) && (
                             <button className="tm-btn tm-btn--sm tm-btn--ghost" onClick={() => handleReset(a.id, a.full_name)}>↺ Reset</button>
                           )}
                           <button className="tm-btn tm-btn--sm tm-btn--danger" onClick={() => handleForceDelete(a.id, a.full_name)}>Xóa</button>
@@ -320,13 +330,13 @@ export default function TestsManager() {
               <table style={{ width: '100%', fontSize: 14, borderCollapse: 'collapse' }}>
                 <tbody>
                   {[
-                    ['Ứng viên',      lockDetail.full_name],
-                    ['Email',         lockDetail.email],
-                    ['Bài test',      lockDetail.test_title],
-                    ['Trạng thái',    lockDetail.status],
-                    ['Số vi phạm',    `${lockDetail.violation_count || 0} lần`],
-                    ['Bị khóa',       lockDetail.is_locked ? '✅ Có' : '❌ Không'],
-                    ['Lý do khóa',    lockDetail.lock_reason || '—'],
+                    ['Ứng viên', lockDetail.full_name],
+                    ['Email', lockDetail.email],
+                    ['Bài test', lockDetail.test_title],
+                    ['Trạng thái', lockDetail.status],
+                    ['Số vi phạm', `${lockDetail.violation_count || 0} lần`],
+                    ['Bị khóa', lockDetail.is_locked ? '✅ Có' : '❌ Không'],
+                    ['Lý do khóa', lockDetail.lock_reason || '—'],
                     ['Thời điểm khóa', lockDetail.locked_at ? new Date(lockDetail.locked_at).toLocaleString('vi-VN') : '—'],
                   ].map(([label, value]) => (
                     <tr key={label} style={{ borderBottom: '1px solid #f3f4f6' }}>
@@ -366,14 +376,11 @@ export default function TestsManager() {
   );
 }
 
-// ============================================================
-// Modal: Tạo bộ đề
-// ============================================================
 function CreateTestModal({ onClose, onSuccess, apiBase, getHeaders }) {
-  const [form, setForm]       = useState({ title: '', type: 'excel_word', time_limit: 30, passing_score: 60 });
+  const [form, setForm] = useState({ title: '', type: 'excel_word', time_limit: 30, passing_score: 60 });
   const [questions, setQuestions] = useState([defaultQuestion()]);
-  const [saving, setSaving]   = useState(false);
-  const [error,  setError]    = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   function defaultQuestion() {
     return {
@@ -383,10 +390,10 @@ function CreateTestModal({ onClose, onSuccess, apiBase, getHeaders }) {
     };
   }
 
-  const addQuestion    = () => setQuestions(qs => [...qs, { ...defaultQuestion(), order: qs.length + 1 }]);
+  const addQuestion = () => setQuestions(qs => [...qs, { ...defaultQuestion(), order: qs.length + 1 }]);
   const removeQuestion = (i) => setQuestions(qs => qs.filter((_, idx) => idx !== i));
   const updateQuestion = (i, field, value) => setQuestions(qs => qs.map((q, idx) => idx === i ? { ...q, [field]: value } : q));
-  const updateOption   = (qi, oi, value) => setQuestions(qs => qs.map((q, idx) => {
+  const updateOption = (qi, oi, value) => setQuestions(qs => qs.map((q, idx) => {
     if (idx !== qi) return q;
     return { ...q, options: q.options.map((o, oidx) => oidx === oi ? { ...o, text: value } : o) };
   }));
@@ -399,8 +406,8 @@ function CreateTestModal({ onClose, onSuccess, apiBase, getHeaders }) {
         ...form,
         questions: questions.map((q, i) => ({
           ...q, order: i + 1,
-          options: ['multiple_choice','multi_select'].includes(q.question_type) ? q.options : null,
-          correct_answer: ['multiple_choice','multi_select'].includes(q.question_type) ? q.correct_answer : null,
+          options: ['multiple_choice', 'multi_select'].includes(q.question_type) ? q.options : null,
+          correct_answer: ['multiple_choice', 'multi_select'].includes(q.question_type) ? q.correct_answer : null,
           ai_graded: q.ai_graded ? 1 : 0,
         }))
       };
@@ -478,7 +485,7 @@ function CreateTestModal({ onClose, onSuccess, apiBase, getHeaders }) {
                   <input value={q.speaking_prompt} onChange={e => updateQuestion(i, 'speaking_prompt', e.target.value)} placeholder="VD: Introduce yourself in English" />
                 </div>
               )}
-              {['multiple_choice','multi_select'].includes(q.question_type) && (
+              {['multiple_choice', 'multi_select'].includes(q.question_type) && (
                 <>
                   <div className="tm-options">
                     {q.options.map((opt, oi) => (
@@ -496,7 +503,7 @@ function CreateTestModal({ onClose, onSuccess, apiBase, getHeaders }) {
                   </div>
                 </>
               )}
-              {['short_answer','reading','speaking'].includes(q.question_type) && (
+              {['short_answer', 'reading', 'speaking'].includes(q.question_type) && (
                 <div className="tm-field">
                   <label>Tiêu chí chấm AI (tùy chọn)</label>
                   <input value={q.ai_rubric} onChange={e => updateQuestion(i, 'ai_rubric', e.target.value)}
@@ -514,26 +521,23 @@ function CreateTestModal({ onClose, onSuccess, apiBase, getHeaders }) {
         </div>
       </div>
     </div>,
-    document.body   // ← Portal ra ngoài DOM tree
+    document.body
   );
 }
 
-// ============================================================
-// Modal: Assign
-// ============================================================
 function AssignModal({ test, applications, onClose, onSuccess, apiBase, getHeaders }) {
   const [selected, setSelected] = useState([]);
   const [deadline, setDeadline] = useState('');
-  const [saving,   setSaving]   = useState(false);
-  const [error,    setError]    = useState('');
-  const [search,   setSearch]   = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
 
-const filtered = applications.filter(a =>
-  a.status === 'interviewing' && (
-    a.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-    a.email?.toLowerCase().includes(search.toLowerCase())
-  )
-);
+  const filtered = applications.filter(a =>
+    a.status === 'interviewing' && (
+      a.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+      a.email?.toLowerCase().includes(search.toLowerCase())
+    )
+  );
   const toggle = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
 
   const handleAssign = async () => {
@@ -582,14 +586,13 @@ const filtered = applications.filter(a =>
           <div style={{ fontSize: 13, color: '#888', marginTop: 8 }}>Đã chọn: {selected.length} ứng viên</div>
         </div>
         <div className="tm-modal__foot">
-          <button className="tm-btn tm-btn--ghost" onClick={onClose}>Hủy</button>
           <button className="tm-btn tm-btn--primary" onClick={handleAssign} disabled={saving}>
             {saving ? 'Đang gửi...' : `Gửi cho ${selected.length} ứng viên`}
           </button>
         </div>
       </div>
     </div>,
-    document.body   // ← Portal
+    document.body
   );
 }
 
@@ -646,12 +649,256 @@ function TestDetailModal({ test, onClose, apiBase, getHeaders }) {
         </div>
       </div>
     </div>,
-    document.body   // ← Portal
+    document.body
   );
 }
 
 // ============================================================
-// Modal: Kết quả
+// Hàm xuất PDF dùng print window
+// ============================================================
+function exportResultToPDF(data) {
+  const { assignment, answers, result } = data;
+  const printedAt = new Date().toLocaleString('vi-VN');
+
+  const statusColor = result?.passed ? '#16a34a' : '#dc2626';
+  const statusText = result?.passed ? 'ĐẠT' : 'KHÔNG ĐẠT';
+
+  const answersHTML = (answers || []).map((a, i) => {
+    const bgColor = a.is_correct === 1 ? '#f0fdf4' : a.is_correct === 0 ? '#fef2f2' : '#fafafa';
+    const borderColor = a.is_correct === 1 ? '#bbf7d0' : a.is_correct === 0 ? '#fecaca' : '#e5e7eb';
+    const iconText = a.is_correct === 1 ? '✓' : a.is_correct === 0 ? '✗' : '?';
+    const iconColor = a.is_correct === 1 ? '#16a34a' : a.is_correct === 0 ? '#dc2626' : '#9ca3af';
+
+    return `
+      <div style="
+        background:${bgColor};
+        border:1px solid ${borderColor};
+        border-radius:8px;
+        padding:14px 16px;
+        margin-bottom:12px;
+        page-break-inside:avoid;
+      ">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span style="
+            background:#1e40af;color:#fff;
+            font-size:11px;font-weight:700;
+            padding:2px 8px;border-radius:4px;
+          ">Câu ${i + 1}</span>
+          <span style="
+            font-size:11px;color:#6b7280;
+            background:#f3f4f6;padding:2px 8px;border-radius:4px;
+          ">${a.question_type}</span>
+          <span style="margin-left:auto;font-weight:600;font-size:13px;color:#374151;">
+            ${a.score ?? '?'}/${a.max_points} điểm
+          </span>
+          <span style="font-size:16px;color:${iconColor};font-weight:700;">${iconText}</span>
+        </div>
+        <p style="margin:0 0 8px;font-size:13px;color:#111827;line-height:1.5;">${a.content || ''}</p>
+        <div style="font-size:13px;color:#374151;margin-bottom:4px;">
+          <span style="color:#6b7280;font-weight:500;">Trả lời: </span>
+          ${a.answer || '<em style="color:#9ca3af">Không trả lời</em>'}
+        </div>
+        ${a.correct_answer ? `
+          <div style="font-size:13px;color:#16a34a;margin-bottom:4px;">
+            <span style="font-weight:500;">Đáp án đúng: </span>${a.correct_answer}
+          </div>` : ''}
+        ${a.ai_feedback ? `
+          <div style="
+            margin-top:8px;padding:8px 12px;
+            background:#eff6ff;border-left:3px solid #3b82f6;
+            border-radius:0 6px 6px 0;font-size:12px;color:#1e40af;
+          ">
+            <span style="font-weight:600;">AI nhận xét: </span>${a.ai_feedback}
+          </div>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Kết quả — ${assignment?.full_name || ''}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #111827;
+      background: #fff;
+      padding: 32px 40px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    @media print {
+      body { padding: 20px 28px; }
+      .no-print { display: none !important; }
+      @page { margin: 1.5cm; size: A4; }
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #1e40af;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+    .company { font-size: 11px; color: #6b7280; margin-top: 4px; }
+    .print-btn {
+      background: #1e40af;
+      color: #fff;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .print-btn:hover { background: #1d4ed8; }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 24px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+    }
+    .info-row { display: flex; gap: 8px; font-size: 13px; }
+    .info-label { color: #6b7280; min-width: 90px; flex-shrink: 0; }
+    .info-value { font-weight: 500; color: #111827; }
+    .score-box {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 10px;
+      padding: 16px 24px;
+      margin-bottom: 20px;
+    }
+    .score-pct {
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .score-pct.pass { color: #16a34a; }
+    .score-pct.fail { color: #dc2626; }
+    .score-meta { display: flex; flex-direction: column; gap: 4px; }
+    .score-detail { font-size: 15px; color: #374151; font-weight: 600; }
+    .verdict {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .ai-summary {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+    }
+    .ai-summary-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #1e40af;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e40af;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #dbeafe;
+    }
+    .footer {
+      margin-top: 32px;
+      padding-top: 12px;
+      border-top: 1px solid #e5e7eb;
+      font-size: 11px;
+      color: #9ca3af;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1 style="font-size:20px;font-weight:800;color:#1e40af;">KẾT QUẢ BÀI KIỂM TRA</h1>
+      <div class="company">VIET HUONG CERAMICS — Hệ thống tuyển dụng</div>
+    </div>
+    <button class="print-btn no-print" onclick="window.print()">In / Lưu PDF</button>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-row">
+      <span class="info-label">Ứng viên:</span>padding: 10px 14px
+      <span class="info-value">${assignment?.full_name || '—'}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Email:</span>
+      <span class="info-value">${assignment?.email || '—'}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Bài test:</span>
+      <span class="info-value">${assignment?.test_title || '—'}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Loại:</span>
+      <span class="info-value">${assignment?.test_type ? typeLabel(assignment.test_type) : '—'}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Ngày xuất:</span>
+      <span class="info-value">${printedAt}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Trạng thái:</span>
+      <span class="info-value">Chấm điểm</span>
+    </div>
+  </div>
+
+  ${result ? `
+  <div class="score-box">
+    <span class="score-pct ${result.passed ? 'pass' : 'fail'}">${result.percentage}%</span>
+    <div class="score-meta">
+      <span class="score-detail">${result.total_score} / ${result.max_score} điểm</span>
+      <span class="verdict" style="background:${statusColor};">${statusText}</span>
+    </div>
+  </div>
+
+  ${result.ai_summary ? `
+  <div class="ai-summary">
+    <div class="ai-summary-label">Nhận xét của Trợ lý ảo VIETHUONG CERAMICS</div>
+    <p style="font-size:13px;color:#1e3a8a;line-height:1.6;">${result.ai_summary}</p>
+  </div>` : ''}
+
+  <div class="section-title">Chi tiết từng câu (${answers?.length || 0} câu)</div>
+  ${answersHTML}
+  ` : '<p style="color:#9ca3af;text-align:center;padding:32px 0;">Chưa có kết quả chấm điểm</p>'}
+
+  <div class="footer">
+    Tài liệu này được tạo tự động bởi hệ thống tuyển dụng Viet Huong Ceramics &nbsp;|&nbsp; ${printedAt}
+  </div>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank', 'width=900,height=700');
+  if (!win) {
+    alert('Vui lòng cho phép popup để xuất PDF.');
+    return;
+  }
+  win.document.write(html);
+  win.document.close();
+}
+
+// ============================================================
+// Modal: Kết quả (đã thêm nút Xuất PDF)
 // ============================================================
 function ResultModal({ data, onClose }) {
   const { assignment, answers, result } = data;
@@ -676,7 +923,7 @@ function ResultModal({ data, onClose }) {
                 </div>
                 {result.ai_summary && (
                   <div className="tm-ai-summary">
-                    <div className="tm-ai-summary__label">Nhận xét AI</div>
+                    <div className="tm-ai-summary__label">Nhận xét trợ lý ảo VIETHUONG CERAMICS</div>
                     <p>{result.ai_summary}</p>
                   </div>
                 )}
@@ -701,9 +948,18 @@ function ResultModal({ data, onClose }) {
         </div>
         <div className="tm-modal__foot">
           <button className="tm-btn tm-btn--ghost" onClick={onClose}>Đóng</button>
+          {result && (
+            <button
+              className="tm-btn tm-btn--primary"
+              onClick={() => exportResultToPDF(data)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              🖨️ Xuất PDF
+            </button>
+          )}
         </div>
       </div>
     </div>,
-    document.body   // ← Portal
+    document.body
   );
 }

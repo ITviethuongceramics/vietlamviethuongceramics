@@ -44,7 +44,7 @@ export default function JobsManager({ token }) {
     const locations = form.locations?.length > 0 ? form.locations : [form.location || ''];
 
     if (editJob) {
-      // Sửa: chỉ cập nhật 1 tin
+ 
       await fetch(`${import.meta.env.VITE_API_URL}/jobs/${editJob.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -79,7 +79,7 @@ export default function JobsManager({ token }) {
     setEditJob(job);
     setForm({ ...job, deadline: job.deadline ? job.deadline.split('T')[0] : '' });
 
-    // Check location mode
+
     const standardLocations = ['Đà Nẵng', 'Hải Phòng', 'Hồ Chí Minh'];
     if (job.location && !standardLocations.includes(job.location)) {
       setLocationMode('custom');
@@ -119,7 +119,7 @@ export default function JobsManager({ token }) {
     inactive: { label: 'Ngừng tuyển', cls: 'badge--inactive' },
   }[status] || { label: status, cls: '' });
 
-  // Pagination helpers
+
   const paginate = (data, page, perPage) => data.slice((page - 1) * perPage, page * perPage);
   const getTotalPages = (data, perPage) => Math.max(1, Math.ceil(data.length / perPage));
   const getPageNumbers = (current, total) => {

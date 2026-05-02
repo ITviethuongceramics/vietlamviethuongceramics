@@ -8,7 +8,7 @@ $green:      #27ae60;
 $green-soft: rgba(39, 174, 96, 0.1);
 $orange:     #e67e22;
 $orange-soft:rgba(230, 126, 34, 0.1);
-$sidebar-bg: #27261f;
+$sidebar-bg: #ffffff;
 $sidebar-w:  230px;
 $white:      #ffffff;
 $gray:       #6b7280;
@@ -102,17 +102,18 @@ $text-sub:   #6b7280;
     margin: 0 12px;
     padding: 11px 14px;
     border-radius: 10px;
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid #ff0000;
     background: transparent;
-    color: rgba(255,255,255,0.4);
+    color: #ff0707;
     font-family: inherit;
-    font-size: 13px;
+    font-size: 15px;
     cursor: pointer;
     transition: all 0.2s;
+    
 
     &:hover {
-      background: rgba(255,255,255,0.06);
-      color: rgba(255,255,255,0.7);
+      background: #c93e3e3e;
+      color: #ff0000;
     }
   }
 }
@@ -125,7 +126,7 @@ $text-sub:   #6b7280;
   border-radius: 10px;
   border: none;
   background: transparent;
-  color: rgba(255,255,255,0.45);
+  color:  rgb(0 0 0);
   font-family: inherit;
   font-size: 14px;
   font-weight: 500;
@@ -137,8 +138,8 @@ $text-sub:   #6b7280;
   svg { flex-shrink: 0; }
 
   &:hover {
-    background: rgba(255,255,255,0.06);
-    color: rgba(255,255,255,0.8);
+    background: rgba(255, 0, 0, 0.06);
+    color: rgba(246, 0, 0, 0.8);
   }
 
   &--active {

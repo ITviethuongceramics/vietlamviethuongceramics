@@ -12,7 +12,7 @@ const headers = () => ({
 const MAX_VIOLATIONS = 2;
 const TAB_OUT_TIMEOUT_MS = 5000;
 
-function useAntiCheat({ assignmentId, onForceSubmit, isRequestingMic }) {
+function useAntiCheat({ assignmentId, onForceSubmit, isRequestingMic, isSubmitting }) {
   const [violations, setViolations] = useState(0);
   const [showWarning, setShowWarning] = useState(false);
   const [warningMsg, setWarningMsg] = useState('');
@@ -22,7 +22,7 @@ function useAntiCheat({ assignmentId, onForceSubmit, isRequestingMic }) {
   const tabOutTimer = useRef(null);
   const isHidden = useRef(false);
   const forcedRef = useRef(false);
-
+const isSubmittingRef = useRef(false);
   const triggerForceSubmit = useCallback((reason) => {
     if (forcedRef.current) return;
     forcedRef.current = true;
@@ -83,6 +83,7 @@ function useAntiCheat({ assignmentId, onForceSubmit, isRequestingMic }) {
       if (document.visibilityState === 'hidden') {
         if (isHidden.current) return;
         if (isRequestingMic.current) return;
+           if (isSubmitting?.current) return;
         isHidden.current = true;
 
         tabOutTimer.current = setTimeout(() => triggerForceSubmit('tab_out_5s'), TAB_OUT_TIMEOUT_MS);
@@ -96,6 +97,7 @@ function useAntiCheat({ assignmentId, onForceSubmit, isRequestingMic }) {
     const handleBlur = () => {
       if (isHidden.current) return;
       if (isRequestingMic.current) return;
+      if (isSubmitting?.current) return;
       isHidden.current = true;
       tabOutTimer.current = setTimeout(() => triggerForceSubmit('blur_5s'), TAB_OUT_TIMEOUT_MS);
       recordViolation('window_blur');
@@ -439,6 +441,7 @@ export default function CandidateTestPage() {
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const isRequestingMic = useRef(false);
+  const isSubmittingRef = useRef(false); 
   useEffect(() => {
     const locked = JSON.parse(localStorage.getItem('locked_assignments') || '[]');
     if (locked.includes(String(assignment_id))) {
@@ -470,7 +473,7 @@ export default function CandidateTestPage() {
   }, [answers, assignment_id, submitting]);
 
   const { violations, showWarning, setShowWarning, warningMsg, forceSubmit } =
-    useAntiCheat({ assignmentId: assignment_id, onForceSubmit: handleSubmit, isRequestingMic });
+    useAntiCheat({ assignmentId: assignment_id, onForceSubmit: handleSubmit, isRequestingMic ,isSubmitting: isSubmittingRef });
 
   useEffect(() => {
     if (!localStorage.getItem('candidate_token')) { navigate('/candidate'); return; }
@@ -505,10 +508,14 @@ export default function CandidateTestPage() {
     });
   };
 
-  const confirmSubmit = () => {
-    if (!confirm('Bạn có chắc muốn nộp bài? Không thể chỉnh sửa sau khi nộp.')) return;
-    handleSubmit();
-  };
+ const confirmSubmit = () => {
+  isSubmittingRef.current = true;  // bật trước
+  if (!confirm('Bạn có chắc muốn nộp bài? Không thể chỉnh sửa sau khi nộp.')) {
+    isSubmittingRef.current = false;  // tắt nếu hủy
+    return;
+  }
+  handleSubmit();
+};
 
   if (submitted) return (
     <div className="ct-done-page">

@@ -573,7 +573,6 @@ export default function ApplicationsManager({ token }) {
         </div>
       )}
 
-      {/* DETAIL MODAL */}
       {selectedApp && !showOfferModal && (
         <div className="adm-modal-backdrop" onClick={() => setSelectedApp(null)}>
           <div className="adm-modal" onClick={e => e.stopPropagation()}>
@@ -616,25 +615,7 @@ export default function ApplicationsManager({ token }) {
                 </div>
               </div>
 
-              {/* Nhắc HR: chỉ giao test khi đã chuyển sang "Chờ phỏng vấn" */}
-              {selectedApp.status === 'pending' && (
-                <div style={{
-                  background: '#fffbeb', border: '1px solid #fcd34d',
-                  borderRadius: 8, padding: '10px 14px',
-                  fontSize: 13, color: '#92400e', marginBottom: 12
-                }}>
-                  
-                </div>
-              )}
-              {selectedApp.status === 'interviewing' && (
-                <div style={{
-                  background: '#eff6ff', border: '1px solid #93c5fd',
-                  borderRadius: 8, padding: '10px 14px',
-                  fontSize: 13, color: '#1e40af', marginBottom: 12
-                }}>
-                 
-                </div>
-              )}
+       
 
               <div className="adm-field">
                 <label>Ghi chú</label>
