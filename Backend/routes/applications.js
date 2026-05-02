@@ -1,3 +1,5 @@
+console.log('[DEBUG] BREVO_USER:', process.env.BREVO_USER);
+console.log('[DEBUG] BREVO_PASS:', process.env.BREVO_PASS?.substring(0, 20));
 const express = require('express');
 const router = express.Router();
 const pool = require('../data/db');
@@ -5,7 +7,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const nodemailer = require('nodemailer');
+
 const { uploadCV, appendToSheet, appendOfferToSheet } = require('../services/google');
 const { candidateEmailHtml, hrEmailHtml } = require('./email_templates');
 
@@ -20,26 +22,41 @@ function authMiddleware(req, res, next) {
     res.status(401).json({ message: 'Token không hợp lệ' });
   }
 }
-const transporter = nodemailer.createTransport({
-  host:   'smtp-relay.brevo.com',
-  port:   587,
-  secure: false,
-  auth: {
-    user: process.env.BREVO_USER,
-    pass: process.env.BREVO_PASS,
-  },
-});
 
+
+// Xóa:
+// const nodemailer = require('nodemailer');
+// const transporter = nodemailer.createTransport({...});
+
+// ── EMAIL (Brevo HTTP API) ────────────────────────────────────
 async function sendEmail({ to, subject, html, fromName = 'VIET HUONG CERAMICS - Phòng Nhân Sự', attachments = [] }) {
-  return transporter.sendMail({
-    from:        `"${fromName}" <${process.env.BREVO_USER}>`,
-    to,
+  const body = {
+    sender:      { name: fromName, email: process.env.BREVO_FROM },
+    to:          [{ email: to }],
     subject,
-    html,
-    attachments: attachments
+    htmlContent: html,
+  };
+
+  if (attachments.length > 0) {
+    body.attachment = attachments
       .filter(a => fs.existsSync(a.path))
-      .map(a => ({ filename: a.filename, path: a.path })),
+      .map(a => ({
+        name:    a.filename,
+        content: fs.readFileSync(a.path).toString('base64'),
+      }));
+  }
+
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method:  'POST',
+    headers: {
+      'api-key':      process.env.BREVO_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
   });
+
+  if (!res.ok) throw new Error(`Brevo error: ${await res.text()}`);
+  return res.json();
 }
 
 // ── MULTER ────────────────────────────────────────────────────

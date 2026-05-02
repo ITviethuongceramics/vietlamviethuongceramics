@@ -8,7 +8,7 @@ const jwt = require('jsonwebtoken');
 const { candidateEmailHtml, hrEmailHtml } = require('./email_templates');
 const { uploadCV, appendToSheet } = require('../services/google');
 const pool = require('../data/db');
-const nodemailer = require('nodemailer');
+
 
 function authMiddleware(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
@@ -20,19 +20,41 @@ function authMiddleware(req, res, next) {
     res.status(401).json({ message: 'Token không hợp lệ' });
   }
 }
-const transporter = nodemailer.createTransport({
-  host:   'smtp-relay.brevo.com',
-  port:   587,
-  secure: false,
-  auth: {
-    user: process.env.BREVO_USER,
-    pass: process.env.BREVO_PASS,
-  },
-});
+
+async function brevoSend({ to, subject, html, fromName = 'Viet Huong Ceramics', attachments = [] }) {
+  const body = {
+    sender:      { name: fromName, email: process.env.BREVO_FROM },
+    to:          [{ email: to }],
+    subject,
+    htmlContent: html,
+  };
+
+  if (attachments.length > 0) {
+    body.attachment = attachments
+      .filter(a => fs.existsSync(a.path))
+      .map(a => ({
+        name:    a.filename,
+        content: fs.readFileSync(a.path).toString('base64'),
+      }));
+  }
+
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method:  'POST',
+    headers: {
+      'api-key':      process.env.BREVO_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) throw new Error(`Brevo error: ${await res.text()}`);
+  return res.json();
+}
+// XÓA 2 hàm này (dùng transporter cũ):
 
 async function sendMailToCandidate({ to, subject, html }) {
   return transporter.sendMail({
-    from:    `"Viet Huong Ceramics" <${process.env.BREVO_USER}>`,
+    from:    `"Viet Huong Ceramics" <${process.env.BREVO_FROM}>`,
     to,
     subject,
     html,
@@ -41,7 +63,7 @@ async function sendMailToCandidate({ to, subject, html }) {
 
 async function sendMailToHR({ subject, html, attachments }) {
   return transporter.sendMail({
-    from:    `"Viet Huong Ceramics" <${process.env.BREVO_USER}>`,
+    from:    `"Viet Huong Ceramics" <${process.env.BREVO_FROM}>`,
     to:      process.env.HR_MAIL,
     subject,
     html,
