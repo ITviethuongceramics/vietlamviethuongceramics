@@ -21,21 +21,21 @@ const auth = new google.auth.GoogleAuth({
 });
 
 async function uploadCV(filePath, fileName) {
-  const ext = fileName.split('.').pop().toLowerCase();
-
-  // ✅ Chọn resource_type phù hợp theo loại file
-  const resourceType = ['jpg', 'jpeg', 'png'].includes(ext) ? 'image' : 'raw';
-
   const result = await cloudinary.uploader.upload(filePath, {
-    resource_type: resourceType, // 'raw' cho PDF, DOC, DOCX
-    folder: 'cv-viet-huong',
-    use_filename: true,
+    resource_type:   'image',
+    folder:          'cv-viet-huong',
+    use_filename:    true,
     unique_filename: true,
-    public_id: fileName.replace(/\.[^/.]+$/, ''), // bỏ đuôi file khỏi public_id
   });
 
-  return result.secure_url;
+  const viewableUrl = result.secure_url.replace(
+    '/raw/upload/',
+    '/raw/upload/fl_attachment:false/'
+  );
+
+  return viewableUrl;
 }
+
 
 function formatDateTime(isoString) {
   const d = new Date(isoString);
@@ -49,11 +49,16 @@ function formatDateTime(isoString) {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
+function formatMoney(num) {
+  return new Intl.NumberFormat('vi-VN').format(num) + ' VNĐ';
+}
+
+
 async function appendToSheet(record) {
   const sheets = google.sheets({ version: 'v4', auth });
   await sheets.spreadsheets.values.append({
-    spreadsheetId: process.env.GOOGLE_SHEET_ID,
-    range: 'Trang tính1!A:I',
+    spreadsheetId:    process.env.GOOGLE_SHEET_ID,
+    range:            'Trang tính1!A:I',
     valueInputOption: 'USER_ENTERED',
     requestBody: {
       values: [[
@@ -71,4 +76,28 @@ async function appendToSheet(record) {
   });
 }
 
-module.exports = { uploadCV, appendToSheet };
+
+async function appendOfferToSheet({ fullName, email, offerPosition, startDate, salary, probationSalaryPercent, probationSalary }) {
+  const sheets = google.sheets({ version: 'v4', auth });
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId:    process.env.GOOGLE_SHEET_ID,
+    range:            'Trang tính2!A:G',
+    valueInputOption: 'USER_ENTERED',
+    requestBody: {
+      values: [[
+        fullName,
+        email,
+        offerPosition,
+        startDate,
+        formatMoney(salary),
+        `${probationSalaryPercent}% = ${formatMoney(probationSalary)}`,
+        new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+      ]],
+    },
+  });
+
+  console.log(`[SHEET OFFER] Đã ghi offer cho ${email} vào Trang tính2`);
+}
+
+module.exports = { uploadCV, appendToSheet, appendOfferToSheet };

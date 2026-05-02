@@ -451,7 +451,6 @@ router.post('/assignments/:id/violations', candidateMiddleware, async (req, res)
   }
 });
 
-// POST /api/candidate/assignments/:id/lock — Khoá bài thi
 router.post('/assignments/:id/lock', candidateMiddleware, async (req, res) => {
   try {
     const { reason } = req.body;

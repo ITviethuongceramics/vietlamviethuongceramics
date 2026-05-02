@@ -134,8 +134,10 @@ router.get('/', async (req, res) => {
     rssCache.set(cacheKey, items);
     res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
     res.json({ status: 'ok', feed: slug, count: items.length, items, cached: false });
-  } catch (err) {
-    console.error('[RSS Proxy]', err.message);
+  }    catch (err) {
+    if (!['fetch failed', 'ENOTFOUND', 'ECONNREFUSED'].some(e => err.message.includes(e))) {
+      console.error('[RSS Proxy]', err.message);
+    }
     const staleCache = rssCache.get(cacheKey);
     if (staleCache) {
       return res.json({ status: 'ok', feed: slug, count: staleCache.length, items: staleCache, cached: true, stale: true });

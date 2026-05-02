@@ -6,7 +6,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
-const { uploadCV, appendToSheet } = require('../services/google');
+const { uploadCV, appendToSheet, appendOfferToSheet } = require('../services/google');
 const { candidateEmailHtml, hrEmailHtml } = require('./email_templates');
 
 // ── AUTH ─────────────────────────────────────────────────────
@@ -27,7 +27,8 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
-  }
+  },
+  family: 4,
 });
 
 async function sendEmail({ to, subject, html, fromName = 'VIET HUONG CERAMICS - Phòng Nhân Sự', attachments = [] }) {
@@ -75,13 +76,13 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
   const logoUrl = process.env.LOGO_URL || '';
 
   const rows = [
-    ['1', 'Vị trí', position],
-    ['2', 'Thời gian nhận việc', formattedStartDate],
-    ['3', 'Địa điểm làm việc', work_location],
-    ['4', 'Thời gian thử việc', `${probation_period} tháng`],
+    ['1', 'Vị trí',                 position],
+    ['2', 'Thời gian nhận việc',    formattedStartDate],
+    ['3', 'Địa điểm làm việc',      work_location],
+    ['4', 'Thời gian thử việc',     `${probation_period} tháng`],
     ['5', 'Lương Gross chính thức', `<strong style="color:#B91C1C;">${formatMoney(salary)}</strong>`],
-    ['6', 'Lương thử việc', `${probation_salary_percent}% lương Gross &nbsp;→&nbsp; <strong style="color:#B91C1C;">${formatMoney(probationSalary)}</strong>`],
-    ['7', 'Thời gian làm việc', work_schedule],
+    ['6', 'Lương thử việc',         `${probation_salary_percent}% lương Gross &nbsp;→&nbsp; <strong style="color:#B91C1C;">${formatMoney(probationSalary)}</strong>`],
+    ['7', 'Thời gian làm việc',     work_schedule],
   ];
 
   const infoRows = rows.map((row, i) => `
@@ -288,7 +289,10 @@ function getRejectionEmailHTML({ app }) {
 // ── SEND OFFER ───────────────────────────────────────────────
 router.post('/send-offer', authMiddleware, async (req, res) => {
   try {
-    const { application_id, position, start_date, work_location, probation_period, salary, probation_salary_percent, work_schedule } = req.body;
+    const {
+      application_id, position, start_date, work_location,
+      probation_period, salary, probation_salary_percent, work_schedule
+    } = req.body;
 
     const [apps] = await pool.query('SELECT * FROM applications WHERE id = ?', [application_id]);
     if (apps.length === 0) return res.status(404).json({ message: 'Không tìm thấy ứng viên' });
@@ -298,13 +302,27 @@ router.post('/send-offer', authMiddleware, async (req, res) => {
     const formattedStartDate = `${startDateTime.getHours()}h ngày ${String(startDateTime.getDate()).padStart(2, '0')}/${String(startDateTime.getMonth() + 1).padStart(2, '0')}/${startDateTime.getFullYear()}`;
     const probationSalary = Math.round(parseFloat(salary) * parseFloat(probation_salary_percent) / 100);
 
-    const emailHTML = getOfferEmailHTML({ app, position, formattedStartDate, work_location, probation_period, salary, probation_salary_percent, probationSalary, work_schedule });
+    const emailHTML = getOfferEmailHTML({
+      app, position, formattedStartDate, work_location,
+      probation_period, salary, probation_salary_percent, probationSalary, work_schedule
+    });
 
     await sendEmail({
       to:      app.email,
       subject: `THƯ MỜI NHẬN VIỆC - ${position} - VIET HUONG CERAMICS`,
       html:    emailHTML,
     });
+
+  
+  appendOfferToSheet({
+  fullName:               app.full_name,
+  email:                  app.email,
+  offerPosition:          position,
+  startDate:              formattedStartDate,
+  salary:                 parseFloat(salary),
+  probationSalaryPercent: probation_salary_percent,
+  probationSalary,
+}).catch(err => console.error('[SHEET OFFER ERROR]', err.message));
 
     res.json({ message: 'Đã gửi thư mời nhận việc thành công' });
   } catch (err) {
