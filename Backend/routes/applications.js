@@ -20,26 +20,19 @@ function authMiddleware(req, res, next) {
     res.status(401).json({ message: 'Token không hợp lệ' });
   }
 }
-
-// ── NODEMAILER ────────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
-  host:   'smtp.gmail.com',
+  host:   'smtp-relay.brevo.com',
   port:   587,
   secure: false,
   auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-  family:            4,
-  connectionTimeout: 10000,
-  socketTimeout:     10000,
-  tls: {
-    rejectUnauthorized: false,
+    user: process.env.BREVO_USER,
+    pass: process.env.BREVO_PASS,
   },
 });
+
 async function sendEmail({ to, subject, html, fromName = 'VIET HUONG CERAMICS - Phòng Nhân Sự', attachments = [] }) {
   return transporter.sendMail({
-    from:        `"${fromName}" <${process.env.GMAIL_USER}>`,
+    from:        `"${fromName}" <${process.env.BREVO_USER}>`,
     to,
     subject,
     html,

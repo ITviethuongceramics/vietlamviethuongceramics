@@ -21,24 +21,18 @@ function authMiddleware(req, res, next) {
   }
 }
 const transporter = nodemailer.createTransport({
-  host:   'smtp.gmail.com',
+  host:   'smtp-relay.brevo.com',
   port:   587,
   secure: false,
   auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-  family:            4,
-  connectionTimeout: 10000,
-  socketTimeout:     10000,
-  tls: {
-    rejectUnauthorized: false,
+    user: process.env.BREVO_USER,
+    pass: process.env.BREVO_PASS,
   },
 });
 
 async function sendMailToCandidate({ to, subject, html }) {
   return transporter.sendMail({
-    from: `"Viet Huong Ceramics" <${process.env.GMAIL_USER}>`,
+    from:    `"Viet Huong Ceramics" <${process.env.BREVO_USER}>`,
     to,
     subject,
     html,
@@ -47,7 +41,7 @@ async function sendMailToCandidate({ to, subject, html }) {
 
 async function sendMailToHR({ subject, html, attachments }) {
   return transporter.sendMail({
-    from:    `"Viet Huong Ceramics" <${process.env.GMAIL_USER}>`,
+    from:    `"Viet Huong Ceramics" <${process.env.BREVO_USER}>`,
     to:      process.env.HR_MAIL,
     subject,
     html,
