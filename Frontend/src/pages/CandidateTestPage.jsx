@@ -22,7 +22,8 @@ function useAntiCheat({ assignmentId, onForceSubmit, isRequestingMic, isSubmitti
   const tabOutTimer = useRef(null);
   const isHidden = useRef(false);
   const forcedRef = useRef(false);
-const isSubmittingRef = useRef(false);
+  const isSubmittingRef = useRef(false);
+
   const triggerForceSubmit = useCallback((reason) => {
     if (forcedRef.current) return;
     forcedRef.current = true;
@@ -58,11 +59,9 @@ const isSubmittingRef = useRef(false);
       });
     } catch { /* silent */ }
 
-    // Lần 2 trở đi → khoá ngay
     if (count >= MAX_VIOLATIONS) {
       triggerForceSubmit(`max_violations_${count}`);
     } else {
-      // Lần 1: cảnh báo, overlay phủ toàn màn hình
       setWarningMsg(
         `⚠️ Cảnh báo lần ${count}: Bạn vừa rời khỏi trang thi!\n\n` +
         `Rời thêm 1 lần nữa hoặc rời quá 5 giây sẽ bị khoá bài và nộp tự động.`
@@ -72,7 +71,6 @@ const isSubmittingRef = useRef(false);
   }, [assignmentId, triggerForceSubmit]);
 
   useEffect(() => {
-    // Chặn nút Back
     window.history.pushState(null, '', window.location.href);
     const handlePopState = () => {
       window.history.pushState(null, '', window.location.href);
@@ -83,9 +81,8 @@ const isSubmittingRef = useRef(false);
       if (document.visibilityState === 'hidden') {
         if (isHidden.current) return;
         if (isRequestingMic.current) return;
-           if (isSubmitting?.current) return;
+        if (isSubmitting?.current) return;
         isHidden.current = true;
-
         tabOutTimer.current = setTimeout(() => triggerForceSubmit('tab_out_5s'), TAB_OUT_TIMEOUT_MS);
         recordViolation('tab_switch');
       } else {
@@ -139,7 +136,6 @@ const isSubmittingRef = useRef(false);
 }
 
 // ── Warning Overlay ───────────────────────────────────────────
-// Phủ TOÀN MÀN HÌNH — không click/scroll được phía sau
 function WarningOverlay({ msg, violations, forceSubmit, onClose }) {
   const [countdown, setCountdown] = useState(5);
 
@@ -149,7 +145,6 @@ function WarningOverlay({ msg, violations, forceSubmit, onClose }) {
     return () => clearTimeout(t);
   }, [countdown, forceSubmit]);
 
-  // Khoá scroll body
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     document.body.style.userSelect = 'none';
@@ -172,7 +167,6 @@ function WarningOverlay({ msg, violations, forceSubmit, onClose }) {
         </div>
         <div className="ct-warning-msg">{msg}</div>
 
-        {/* Dots */}
         <div className="ct-warning-counter">
           <span>Lần vi phạm:</span>
           {Array.from({ length: MAX_VIOLATIONS }).map((_, i) => (
@@ -180,7 +174,6 @@ function WarningOverlay({ msg, violations, forceSubmit, onClose }) {
           ))}
         </div>
 
-        {/* Đếm ngược trước khi bấm tiếp tục */}
         {!forceSubmit && (
           <>
             <div className="ct-countdown">
@@ -225,53 +218,103 @@ function Timer({ seconds, onExpire }) {
   return <div className={`ct-timer ${left < 120 ? 'ct-timer--urgent' : ''}`}>{m}:{s}</div>;
 }
 
+// ── SpeakingQuestion — đã fix cho iOS Safari ─────────────────
 function SpeakingQuestion({ question, assignmentId, onRecorded, isRequestingMic }) {
   const [status, setStatus] = useState('idle');
   const [errMsg, setErrMsg] = useState('');
   const [audioUrl, setAudioUrl] = useState(null);
   const mediaRef = useRef(null);
   const chunksRef = useRef([]);
+
+  const uploadAudio = async (blob, type) => {
+    try {
+      const ext = type.includes('mp4') ? 'm4a'
+                : type.includes('ogg') ? 'ogg'
+                : 'webm';
+      const form = new FormData();
+      form.append('audio', blob, `speaking.${ext}`);
+      const r = await fetch(
+        `${API}/api/grading/assignments/${assignmentId}/speaking/${question.id}`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${localStorage.getItem('candidate_token')}` },
+          body: form
+        }
+      );
+      const d = await r.json();
+      if (r.ok) { setStatus('done'); onRecorded(question.id, d.audio_url); }
+      else { setErrMsg(d.message); setStatus('error'); }
+    } catch {
+      setErrMsg('Lỗi upload audio. Vui lòng thử lại.');
+      setStatus('error');
+    }
+  };
+
   const startRecord = async () => {
     setErrMsg('');
-    if (isRequestingMic) isRequestingMic.current = true; // bật flag trước khi xin quyền
+
+    // Kiểm tra MediaRecorder có được hỗ trợ không (một số trình duyệt cũ không có)
+    if (typeof MediaRecorder === 'undefined') {
+      setErrMsg('Trình duyệt không hỗ trợ thu âm. Vui lòng dùng Safari iOS 14.3+ hoặc Chrome.');
+      setStatus('error');
+      return;
+    }
+
+    if (isRequestingMic) isRequestingMic.current = true;
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      if (isRequestingMic) isRequestingMic.current = false; // tắt sau khi được cấp quyền
+      if (isRequestingMic) isRequestingMic.current = false;
 
-      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      // iOS Safari chỉ support audio/mp4 — đặt lên đầu danh sách ưu tiên
+      const mimeType = [
+        'audio/mp4',              // iOS Safari
+        'audio/webm;codecs=opus', // Chrome / Android
+        'audio/webm',
+        'audio/ogg',
+        '',                       // fallback mặc định của browser
+      ].find(t => t === '' || MediaRecorder.isTypeSupported(t));
+
+      let mr;
+      try {
+        mr = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+      } catch {
+        // Nếu tạo với mimeType thất bại, thử không truyền mimeType
+        mr = new MediaRecorder(stream);
+      }
+
       chunksRef.current = [];
       mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        // Lấy type thực tế mà trình duyệt đang dùng
+        const actualType = mr.mimeType || mimeType || 'audio/mp4';
+        const blob = new Blob(chunksRef.current, { type: actualType });
         setAudioUrl(URL.createObjectURL(blob));
-        await uploadAudio(blob);
+        await uploadAudio(blob, actualType);
       };
+
       mediaRef.current = mr;
       mr.start();
       setStatus('recording');
-    } catch {
-      if (isRequestingMic) isRequestingMic.current = false; // tắt nếu lỗi
-      setErrMsg('Không thể truy cập microphone.');
+
+    } catch (err) {
+      if (isRequestingMic) isRequestingMic.current = false;
+      // Phân biệt rõ loại lỗi thay vì chỉ báo chung "Không thể truy cập microphone"
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setErrMsg('Bạn chưa cấp quyền microphone. Vào Cài đặt > Safari > Microphone để bật.');
+      } else if (err.name === 'NotFoundError') {
+        setErrMsg('Không tìm thấy microphone trên thiết bị.');
+      } else if (err.name === 'NotSupportedError') {
+        setErrMsg('Trình duyệt không hỗ trợ thu âm. Vui lòng dùng Safari iOS 14.3+ hoặc Chrome.');
+      } else {
+        setErrMsg(`Lỗi: ${err.message || 'Không thể khởi động thu âm. Thử lại.'}`);
+      }
       setStatus('error');
     }
   };
 
   const stopRecord = () => { mediaRef.current?.stop(); setStatus('uploading'); };
-
-  const uploadAudio = async (blob) => {
-    try {
-      const form = new FormData();
-      form.append('audio', blob, 'speaking.webm');
-      const r = await fetch(
-        `${API}/api/grading/assignments/${assignmentId}/speaking/${question.id}`,
-        { method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('candidate_token')}` }, body: form }
-      );
-      const d = await r.json();
-      if (r.ok) { setStatus('done'); onRecorded(question.id, d.audio_url); }
-      else { setErrMsg(d.message); setStatus('error'); }
-    } catch { setErrMsg('Lỗi upload audio'); setStatus('error'); }
-  };
 
   return (
     <div className="ct-speaking">
@@ -282,20 +325,32 @@ function SpeakingQuestion({ question, assignmentId, onRecorded, isRequestingMic 
         </div>
       )}
       <div className="ct-speaking__controls">
-        {status === 'idle' && <button className="ct-rec-btn ct-rec-btn--start" onClick={startRecord}><span className="ct-rec-dot" /> Bắt đầu thu âm</button>}
-        {status === 'recording' && <button className="ct-rec-btn ct-rec-btn--stop" onClick={stopRecord}><span className="ct-rec-dot ct-rec-dot--pulse" /> Dừng thu âm</button>}
+        {status === 'idle' && (
+          <button className="ct-rec-btn ct-rec-btn--start" onClick={startRecord}>
+            <span className="ct-rec-dot" /> Bắt đầu thu âm
+          </button>
+        )}
+        {status === 'recording' && (
+          <button className="ct-rec-btn ct-rec-btn--stop" onClick={stopRecord}>
+            <span className="ct-rec-dot ct-rec-dot--pulse" /> Dừng thu âm
+          </button>
+        )}
         {status === 'uploading' && <div className="ct-speaking__status">Đang upload...</div>}
         {status === 'done' && (
           <div className="ct-speaking__done">
             <span className="ct-check">✓</span> Đã ghi âm thành công
             {audioUrl && <audio controls src={audioUrl} className="ct-audio" />}
-            <button className="ct-rec-btn ct-rec-btn--redo" onClick={() => { setStatus('idle'); setAudioUrl(null); }}>Ghi lại</button>
+            <button className="ct-rec-btn ct-rec-btn--redo" onClick={() => { setStatus('idle'); setAudioUrl(null); }}>
+              Ghi lại
+            </button>
           </div>
         )}
         {status === 'error' && (
           <div className="ct-speaking__error">
             {errMsg}
-            <button className="ct-rec-btn ct-rec-btn--start" onClick={() => setStatus('idle')}>Thử lại</button>
+            <button className="ct-rec-btn ct-rec-btn--start" onClick={() => setStatus('idle')}>
+              Thử lại
+            </button>
           </div>
         )}
       </div>
@@ -441,7 +496,8 @@ export default function CandidateTestPage() {
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const isRequestingMic = useRef(false);
-  const isSubmittingRef = useRef(false); 
+  const isSubmittingRef = useRef(false);
+
   useEffect(() => {
     const locked = JSON.parse(localStorage.getItem('locked_assignments') || '[]');
     if (locked.includes(String(assignment_id))) {
@@ -473,7 +529,7 @@ export default function CandidateTestPage() {
   }, [answers, assignment_id, submitting]);
 
   const { violations, showWarning, setShowWarning, warningMsg, forceSubmit } =
-    useAntiCheat({ assignmentId: assignment_id, onForceSubmit: handleSubmit, isRequestingMic ,isSubmitting: isSubmittingRef });
+    useAntiCheat({ assignmentId: assignment_id, onForceSubmit: handleSubmit, isRequestingMic, isSubmitting: isSubmittingRef });
 
   useEffect(() => {
     if (!localStorage.getItem('candidate_token')) { navigate('/candidate'); return; }
@@ -485,7 +541,10 @@ export default function CandidateTestPage() {
       .then(d => {
         if (d.is_locked) {
           const cur = JSON.parse(localStorage.getItem('locked_assignments') || '[]');
-          if (!cur.includes(String(assignment_id))) { cur.push(String(assignment_id)); localStorage.setItem('locked_assignments', JSON.stringify(cur)); }
+          if (!cur.includes(String(assignment_id))) {
+            cur.push(String(assignment_id));
+            localStorage.setItem('locked_assignments', JSON.stringify(cur));
+          }
           setError('Bài thi này đã bị khóa do vi phạm quy định. Vui lòng liên hệ HR.');
           setLoading(false); return;
         }
@@ -508,14 +567,14 @@ export default function CandidateTestPage() {
     });
   };
 
- const confirmSubmit = () => {
-  isSubmittingRef.current = true;  // bật trước
-  if (!confirm('Bạn có chắc muốn nộp bài? Không thể chỉnh sửa sau khi nộp.')) {
-    isSubmittingRef.current = false;  // tắt nếu hủy
-    return;
-  }
-  handleSubmit();
-};
+  const confirmSubmit = () => {
+    isSubmittingRef.current = true;
+    if (!confirm('Bạn có chắc muốn nộp bài? Không thể chỉnh sửa sau khi nộp.')) {
+      isSubmittingRef.current = false;
+      return;
+    }
+    handleSubmit();
+  };
 
   if (submitted) return (
     <div className="ct-done-page">
@@ -542,8 +601,6 @@ export default function CandidateTestPage() {
 
   return (
     <div className="ct-page">
-
-      {/* Overlay phủ toàn màn hình — không tắt được khi forceSubmit */}
       {showWarning && (
         <WarningOverlay
           msg={warningMsg}
@@ -616,15 +673,12 @@ export default function CandidateTestPage() {
                 isRequestingMic={isRequestingMic} />
             )}
 
-
-
             {q.question_type === 'typing_sample' && (
               <TypingTest
                 question={q}
                 assignmentId={assignment_id}
                 timeLimit={60}
                 onDone={(result) => {
-                  // Lưu kết quả vào answers để submit
                   setAnswer(q.id, JSON.stringify(result));
                 }}
               />
@@ -710,37 +764,36 @@ export function CandidateResultPage() {
             <p className="ct-ans-item__q">{a.content}</p>
             <div className="ct-ans-item__row">
               <span className="ct-label">Trả lời:</span>
-            {(() => {
-  try {
-    const r = JSON.parse(a.answer);
-    if (r.wpm !== undefined) {
-      // Là kết quả typing
-      return (
-        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 4 }}>
-          <span style={{
-            background: '#fff8e6', border: '1px solid #f0b429',
-            borderRadius: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600
-          }}>
-            ⌨️ {r.wpm} WPM
-          </span>
-          <span style={{
-            background: '#f0fdf4', border: '1px solid #27ae60',
-            borderRadius: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600
-          }}>
-            ✓ {r.accuracy}% chính xác
-          </span>
-          <span style={{
-            background: '#f0f4ff', border: '1px solid #4a6cf7',
-            borderRadius: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600
-          }}>
-            📝 {r.typedText?.split(/\s+/).filter(Boolean).length} từ đã gõ
-          </span>
-        </div>
-      );
-    }
-  } catch { /* không phải JSON */ }
-  return <span>{a.answer || '(Không trả lời)'}</span>;
-})()}
+              {(() => {
+                try {
+                  const r = JSON.parse(a.answer);
+                  if (r.wpm !== undefined) {
+                    return (
+                      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 4 }}>
+                        <span style={{
+                          background: '#fff8e6', border: '1px solid #f0b429',
+                          borderRadius: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600
+                        }}>
+                          ⌨️ {r.wpm} WPM
+                        </span>
+                        <span style={{
+                          background: '#f0fdf4', border: '1px solid #27ae60',
+                          borderRadius: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600
+                        }}>
+                          ✓ {r.accuracy}% chính xác
+                        </span>
+                        <span style={{
+                          background: '#f0f4ff', border: '1px solid #4a6cf7',
+                          borderRadius: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600
+                        }}>
+                          📝 {r.typedText?.split(/\s+/).filter(Boolean).length} từ đã gõ
+                        </span>
+                      </div>
+                    );
+                  }
+                } catch { /* không phải JSON */ }
+                return <span>{a.answer || '(Không trả lời)'}</span>;
+              })()}
             </div>
             {a.correct_answer && (
               <div className="ct-ans-item__row correct-ans">

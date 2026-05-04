@@ -102,31 +102,28 @@ export default function ApplicationsManager({ token }) {
     setAdding(true);
     try {
       const formData = new FormData();
-      formData.append('full_name',    newApp.full_name);
-      formData.append('email',        newApp.email);
-      formData.append('phone',        newApp.phone);
-      formData.append('position',     newApp.position);
-      formData.append('experience',   newApp.experience   || '');
-      formData.append('address',      newApp.address      || '');
+      formData.append('full_name', newApp.full_name);
+      formData.append('email', newApp.email);
+      formData.append('phone', newApp.phone);
+      formData.append('position', newApp.position);
+      formData.append('experience', newApp.experience || '');
+      formData.append('address', newApp.address || '');
       formData.append('cover_letter', newApp.cover_letter || '');
       if (newApp.cvFile) formData.append('cv', newApp.cvFile);
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/applications/manual`, {
+      // Đóng modal + toast ngay, không chờ email
+      setShowAddModal(false);
+      setNewApp({ full_name: '', email: '', phone: '', position: '', experience: '', address: '', cover_letter: '', cvFile: null });
+      showToast('Thêm hồ sơ thành công!', 'success');
+      fetchApplications();
+
+      // Gửi request ngầm, không await
+      fetch(`${import.meta.env.VITE_API_URL}/applications/manual`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        showToast(error.message || 'Không thể thêm hồ sơ', 'error');
-        return;
-      }
-      showToast('Thêm hồ sơ thành công! Email đang được gửi...', 'success');
-      setShowAddModal(false);
-      setNewApp({ full_name: '', email: '', phone: '', position: '', experience: '', address: '', cover_letter: '', cvFile: null });
-      fetchApplications();
-    } catch {
-      showToast('Có lỗi xảy ra khi thêm hồ sơ', 'error');
+      }).catch(err => console.error('[ADD ERROR]', err.message));
+
     } finally {
       setAdding(false);
     }
@@ -230,10 +227,10 @@ export default function ApplicationsManager({ token }) {
 
   // ── Status config — 1 chỗ duy nhất để thêm/sửa trạng thái ──
   const STATUS_MAP = {
-    pending:      { label: 'Chờ xét',          cls: 'adm-badge--pending',      Icon: AlertCircle },
-    interviewing: { label: 'Chờ phỏng vấn',    cls: 'adm-badge--interviewing', Icon: Calendar    },
-    passed:       { label: 'Đạt',               cls: 'adm-badge--passed',       Icon: CheckCircle },
-    failed:       { label: 'Không đạt',         cls: 'adm-badge--failed',       Icon: XCircle     },
+    pending: { label: 'Chờ xét', cls: 'adm-badge--pending', Icon: AlertCircle },
+    interviewing: { label: 'Chờ phỏng vấn', cls: 'adm-badge--interviewing', Icon: Calendar },
+    passed: { label: 'Đạt', cls: 'adm-badge--passed', Icon: CheckCircle },
+    failed: { label: 'Không đạt', cls: 'adm-badge--failed', Icon: XCircle },
   };
   const appStatusInfo = (status) => STATUS_MAP[status] || { label: status, cls: '', Icon: AlertCircle };
 
@@ -242,21 +239,21 @@ export default function ApplicationsManager({ token }) {
       const q = appFilter.search.toLowerCase();
       if (!app.full_name?.toLowerCase().includes(q) && !app.email?.toLowerCase().includes(q)) return false;
     }
-    if (appFilter.status     && app.status !== appFilter.status) return false;
+    if (appFilter.status && app.status !== appFilter.status) return false;
     if (appFilter.department && app.department !== appFilter.department) return false;
-    if (appFilter.location   && !app.address?.includes(appFilter.location)) return false;
+    if (appFilter.location && !app.address?.includes(appFilter.location)) return false;
     if (appFilter.experience && app.experience !== appFilter.experience) return false;
     if (appFilter.dateRange) {
       const diffDays = (new Date() - new Date(app.created_at)) / (1000 * 60 * 60 * 24);
-      if (appFilter.dateRange === '1d' && diffDays > 1)  return false;
-      if (appFilter.dateRange === '1w' && diffDays > 7)  return false;
+      if (appFilter.dateRange === '1d' && diffDays > 1) return false;
+      if (appFilter.dateRange === '1w' && diffDays > 7) return false;
       if (appFilter.dateRange === '1m' && diffDays > 30) return false;
     }
     return true;
   });
 
-  const paginate       = (data, page, perPage) => data.slice((page - 1) * perPage, page * perPage);
-  const getTotalPages  = (data, perPage) => Math.max(1, Math.ceil(data.length / perPage));
+  const paginate = (data, page, perPage) => data.slice((page - 1) * perPage, page * perPage);
+  const getTotalPages = (data, perPage) => Math.max(1, Math.ceil(data.length / perPage));
   const getPageNumbers = (current, total) => {
     const pages = [];
     if (total <= 7) { for (let i = 1; i <= total; i++) pages.push(i); }
@@ -289,7 +286,7 @@ export default function ApplicationsManager({ token }) {
     );
   };
 
-  const pagedApps     = paginate(filteredApps, appPage, APPS_PER_PAGE);
+  const pagedApps = paginate(filteredApps, appPage, APPS_PER_PAGE);
   const appTotalPages = getTotalPages(filteredApps, APPS_PER_PAGE);
 
   return (
@@ -537,7 +534,58 @@ export default function ApplicationsManager({ token }) {
               </div>
               <div className="adm-field">
                 <label>Thời gian nhận việc <span style={{ color: 'var(--color-danger)' }}>*</span></label>
-                <input type="datetime-local" value={offerData.start_date} onChange={e => setOfferData({ ...offerData, start_date: e.target.value })} />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="number" placeholder="Ngày" min="1" max="31"
+                    style={{ width: 70 }}
+                    value={offerData.start_date ? new Date(offerData.start_date).getDate() : ''}
+                    onChange={e => {
+                      const d = new Date(offerData.start_date || new Date());
+                      d.setDate(Number(e.target.value));
+                      setOfferData({ ...offerData, start_date: d.toISOString().slice(0, 16) });
+                    }}
+                  />
+                  <span style={{ alignSelf: 'center' }}>/</span>
+                  <input
+                    type="number" placeholder="Tháng" min="1" max="12"
+                    style={{ width: 80 }}
+                    value={offerData.start_date ? new Date(offerData.start_date).getMonth() + 1 : ''}
+                    onChange={e => {
+                      const d = new Date(offerData.start_date || new Date());
+                      d.setMonth(Number(e.target.value) - 1);
+                      setOfferData({ ...offerData, start_date: d.toISOString().slice(0, 16) });
+                    }}
+                  />
+                  <span style={{ alignSelf: 'center' }}>/</span>
+                  <input
+                    type="number" placeholder="Năm" min="2024" max="2030"
+                    style={{ width: 90 }}
+                    value={offerData.start_date ? new Date(offerData.start_date).getFullYear() : ''}
+                    onChange={e => {
+                      const d = new Date(offerData.start_date || new Date());
+                      d.setFullYear(Number(e.target.value));
+                      setOfferData({ ...offerData, start_date: d.toISOString().slice(0, 16) });
+                    }}
+                  />
+                  <span style={{ alignSelf: 'center' }}>lúc</span>
+                  <input
+                    type="time"
+                    style={{ width: 110 }}
+                    value={offerData.start_date ? offerData.start_date.slice(11, 16) : ''}
+                    onChange={e => {
+                      const base = offerData.start_date || new Date().toISOString().slice(0, 10);
+                      setOfferData({ ...offerData, start_date: base.slice(0, 10) + 'T' + e.target.value });
+                    }}
+                  />
+                </div>
+                {offerData.start_date && (
+                  <span style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 4, display: 'block' }}>
+                    {new Date(offerData.start_date).toLocaleString('vi-VN', {
+                      day: '2-digit', month: '2-digit', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit'
+                    })}
+                  </span>
+                )}
               </div>
               <div className="adm-field">
                 <label>Địa điểm làm việc</label>
@@ -583,12 +631,12 @@ export default function ApplicationsManager({ token }) {
             <div className="adm-modal__body">
               <div className="adm-modal__info-grid">
                 {[
-                  ['Họ tên',        selectedApp.full_name,  null],
-                  ['Email',         selectedApp.email,      <Mail size={13} />],
-                  ['Số điện thoại', selectedApp.phone,      <Phone size={13} />],
-                  ['Vị trí',        selectedApp.position,   <Briefcase size={13} />],
-                  ['Kinh nghiệm',   selectedApp.experience, <Clock size={13} />],
-                  ['Địa chỉ',       selectedApp.address,    <MapPin size={13} />],
+                  ['Họ tên', selectedApp.full_name, null],
+                  ['Email', selectedApp.email, <Mail size={13} />],
+                  ['Số điện thoại', selectedApp.phone, <Phone size={13} />],
+                  ['Vị trí', selectedApp.position, <Briefcase size={13} />],
+                  ['Kinh nghiệm', selectedApp.experience, <Clock size={13} />],
+                  ['Địa chỉ', selectedApp.address, <MapPin size={13} />],
                 ].map(([label, value, icon]) => (
                   <div className="adm-modal__info-row" key={label}>
                     <span className="adm-modal__info-label">{label}</span>
@@ -615,8 +663,6 @@ export default function ApplicationsManager({ token }) {
                 </div>
               </div>
 
-       
-
               <div className="adm-field">
                 <label>Ghi chú</label>
                 <textarea rows={4} value={selectedApp.note || ''} onChange={e => setSelectedApp({ ...selectedApp, note: e.target.value })} placeholder="Nhập ghi chú..." />
@@ -637,4 +683,4 @@ export default function ApplicationsManager({ token }) {
       )}
     </>
   );
-}
+}   
