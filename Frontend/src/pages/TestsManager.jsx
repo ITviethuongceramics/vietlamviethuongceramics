@@ -276,18 +276,16 @@ export default function TestsManager() {
                       </td>
                       <td>
                         <div className="tm-row-actions">
-                          {a.status === 'submitted' && (
-                            <button className="tm-btn tm-btn--sm tm-btn--primary" onClick={() => handleGrade(a.id)}>Chấm AI</button>
-                          )}
+                         
                           {a.status === 'graded' && (
                             <button className="tm-btn tm-btn--sm" onClick={() => handleViewResult(a.id)}>Kết quả</button>
                           )}
                           {(a.is_locked || a.violation_count > 0) && (
                             <button className="tm-btn tm-btn--sm tm-btn--ghost" onClick={() => handleViewLock(a.id)}>🔒 Vi phạm</button>
                           )}
-                         {['pending', 'in_progress', 'submitted', 'graded', 'expired'].includes(a.status) && (
-  <button className="tm-btn tm-btn--sm tm-btn--ghost" onClick={() => handleReset(a.id, a.full_name)}>↺ Reset</button>
-)}
+                          {['pending', 'in_progress', 'submitted', 'graded'].includes(a.status) && (
+                            <button className="tm-btn tm-btn--sm tm-btn--ghost" onClick={() => handleReset(a.id, a.full_name)}>↺ Reset</button>
+                          )}
                           <button className="tm-btn tm-btn--sm tm-btn--danger" onClick={() => handleForceDelete(a.id, a.full_name)}>Xóa</button>
                         </div>
                       </td>

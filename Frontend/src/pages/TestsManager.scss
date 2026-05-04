@@ -345,14 +345,20 @@ $shadow-md:  0 3px 8px rgba(0,0,0,.09), 0 1px 3px rgba(0,0,0,.05);
     letter-spacing: .4px;
   }
 
-  td {
-    padding: 11px 14px;
-    border-bottom: 1px solid $gray-100;
-    vertical-align: middle;
-    overflow: hidden;           // thêm
-    text-overflow: ellipsis;    // thêm
-    white-space: nowrap;    
+td {
+  padding: 11px 14px;
+  border-bottom: 1px solid $gray-100;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  // ← thêm: cột cuối (Thao tác) không bị cắt
+  &:last-child {
+    overflow: visible;
+    white-space: normal;
   }
+}
 
   tbody tr:last-child td { border-bottom: none; }
   tbody tr:hover td { background: $gray-50; }
@@ -402,7 +408,7 @@ $shadow-md:  0 3px 8px rgba(0,0,0,.09), 0 1px 3px rgba(0,0,0,.05);
   display: flex;
   align-items: center;
   gap: 5px;
-  flex-wrap: nowrap;
+flex-wrap: wrap;  
 }
 
 // ── Badges ────────────────────────────────────────────────
