@@ -354,7 +354,7 @@ async function notifyHR({ assignment, total_score, max_score, percentage, passed
     </table>
 
     <div style="background:#f8f9fa;border-left:4px solid #1a1a2e;padding:14px 16px;border-radius:0 6px 6px 0;margin-bottom:24px;">
-      <div style="font-size:12px;color:#888;margin-bottom:6px;">Nhận xét của AI</div>
+      <div style="font-size:12px;color:#888;margin-bottom:6px;">Nhận xét của từ trợ lý ảo VIETHUONG CERAMICS</div>
       <div style="font-size:14px;color:#333;line-height:1.7;">${ai_summary}</div>
     </div>
 
