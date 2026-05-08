@@ -39,7 +39,7 @@ async function brevoSend({ to, subject, html, fromName = 'Việt Hương Ceramic
     body: JSON.stringify({
       sender:      { name: fromName, email: process.env.BREVO_FROM },
       to:          [{ email: to }],
-      subject,
+      subject, 
       htmlContent: html,
     }),
   });
