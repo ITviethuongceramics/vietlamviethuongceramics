@@ -66,6 +66,7 @@ $shadow-md:  0 3px 8px rgba(0,0,0,.09), 0 1px 3px rgba(0,0,0,.05);
   margin-bottom: 20px;
 }
 
+
 .tm-title {
   font-size: 20px;
   font-weight: 700;
@@ -127,7 +128,6 @@ $shadow-md:  0 3px 8px rgba(0,0,0,.09), 0 1px 3px rgba(0,0,0,.05);
 
   &--primary {
     background: $accent;
-    margin-left: 1050px;
     color: #fff;
     border-color: $accent;
     &:hover { background: darken($accent, 7%); border-color: darken($accent, 7%); }
@@ -146,7 +146,7 @@ $shadow-md:  0 3px 8px rgba(0,0,0,.09), 0 1px 3px rgba(0,0,0,.05);
     &:hover { background: $gray-100; color: $gray-900; }
   }
 
-  &--sm { padding: 4px 10px; font-size: 12px; border-radius: $radius - 1px; margin-top: -22px; }
+  &--sm { padding: 4px 10px; font-size: 12px; border-radius: $radius - 1px;  }
 }
 
 // ── Section ──────────────────────────────────────────────────
@@ -453,7 +453,6 @@ flex-wrap: wrap;
   box-shadow: 0 16px 48px rgba(0,0,0,.16), 0 4px 16px rgba(0,0,0,.08);
   animation: fadeUp .18s ease;
   border: 1px solid $gray-200;
-margin-left: 100px;
   &--lg { max-width: 780px; }
 
   &__head {

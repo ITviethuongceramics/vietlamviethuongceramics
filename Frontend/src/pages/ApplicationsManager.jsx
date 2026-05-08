@@ -570,7 +570,7 @@ export default function ApplicationsManager({ token }) {
                   <span style={{ alignSelf: 'center' }}>lúc</span>
                   <input
                     type="time"
-                    style={{ width: 110 }}
+                    style={{ width: 125 }}
                     value={offerData.start_date ? offerData.start_date.slice(11, 16) : ''}
                     onChange={e => {
                       const base = offerData.start_date || new Date().toISOString().slice(0, 10);
@@ -588,7 +588,7 @@ export default function ApplicationsManager({ token }) {
                 )}
               </div>
               <div className="adm-field">
-                <label>Địa điểm làm việc</label>
+                <label>Địa điểm làm thủ tục nhận việc</label>
                 <input type="text" value={offerData.work_location} onChange={e => setOfferData({ ...offerData, work_location: e.target.value })} />
               </div>
               <div className="adm-field">
