@@ -415,25 +415,13 @@ router.post('/manual', authMiddleware, upload.single('cv'), async (req, res) => 
           receivedAt: new Date().toISOString(),
         }).catch(err => console.error('[SHEETS ERROR]', err.message));
 
-        await Promise.all([
-          sendEmail({
-            to:      email,
-            subject: 'Xác nhận nhận hồ sơ ứng tuyển — Viet Huong Ceramics',
-            html:    candidateEmailHtml({ fullName: full_name, position, experience: experience || '', phone, address: address || '', cvFile }),
-            fromName: 'Viet Huong Ceramics',
-          }).then(() => console.log('[EMAIL OK] Ứng viên:', email))
-            .catch(err => console.error('[EMAIL LỖI] Ứng viên:', err.message)),
-
-          sendEmail({
-            to:          process.env.HR_MAIL,
-            subject:     `[Ứng tuyển mới] ${full_name} — ${position}`,
-            html:        hrEmailHtml({ fullName: full_name, email, phone, position, experience: experience || '', address: address || '', coverLetter: cover_letter || '', cvFile }),
-            fromName:    'Viet Huong Ceramics',
-            attachments: cvFile ? [{ filename: cvFile.originalname, path: cvFile.path }] : [],
-          }).then(() => console.log('[EMAIL OK] HR:', process.env.HR_MAIL))
-            .catch(err => console.error('[EMAIL LỖI] HR:', err.message)),
-        ]);
-
+      await sendEmail({
+  to:      email,
+  subject: 'Xác nhận nhận hồ sơ ứng tuyển — Viet Huong Ceramics',
+  html:    candidateEmailHtml({ fullName: full_name, position, experience: experience || '', phone, address: address || '', cvFile }),
+  fromName: 'Viet Huong Ceramics',
+}).then(() => console.log('[EMAIL OK] Ứng viên:', email))
+  .catch(err => console.error('[EMAIL LỖI] Ứng viên:', err.message));
         await pool.query('UPDATE applications SET email_sent = 1 WHERE id = ?', [id]);
         if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch {} }
       } catch (err) {

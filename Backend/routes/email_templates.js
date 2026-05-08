@@ -11,21 +11,21 @@ function normalizeLogoUrl(url) {
 }
 const LOGO_URL = normalizeLogoUrl(process.env.LOGO_URL);
 
-const RED  = '#C0392B';
+const RED = '#C0392B';
 const DARK = '#2c1a0e';
 
 function candidateEmailHtml({ fullName, position, experience, phone, address, cvFile }) {
-  fullName   = nfc(fullName);
-  position   = nfc(position);
+  fullName = nfc(fullName);
+  position = nfc(position);
   experience = nfc(experience);
-  phone      = nfc(phone);
-  address    = nfc(address);
+  phone = nfc(phone);
+  address = nfc(address);
 
   const rows = [
-    { label: 'V&#7883; tr&#237;',          value: `<strong>${position}</strong>` },
-    { label: 'Kinh nghi&#7879;m',           value: experience || '&mdash;' },
+    { label: 'V&#7883; tr&#237;', value: `<strong>${position}</strong>` },
+    { label: 'Kinh nghi&#7879;m', value: experience || '&mdash;' },
     { label: '&#272;i&#7879;n tho&#7841;i', value: phone },
-    { label: '&#272;&#7883;a ch&#7881;',    value: address || '&mdash;' },
+    { label: '&#272;&#7883;a ch&#7881;', value: address || '&mdash;' },
     {
       label: 'CV &#273;&#237;nh k&#232;m',
       value: cvFile
@@ -93,10 +93,10 @@ function candidateEmailHtml({ fullName, position, experience, phone, address, cv
         <tr><td style="padding:4px 0;"></td></tr>
       </table>
 
-      <p style="margin:0;font-size:13px;color:#888;line-height:1.8;">
-        M&#7885;i th&#7855;c m&#7855;c vui l&#242;ng li&#234;n h&#7879;:
-        <a href="mailto:${process.env.HR_MAIL}" style="color:${RED};text-decoration:none;font-weight:bold;">${process.env.HR_MAIL}</a>
-      </p>
+     <p style="margin:0;font-size:13px;color:#888;line-height:1.8;">
+  Truy c&#7853;p v&#224;o trang website:
+  <a href="https://vieclam.viethuongceramics.com" style="color:${RED};text-decoration:none;font-weight:bold;">vieclam.viethuongceramics.com</a>
+</p>
     </td>
   </tr>
 
@@ -125,21 +125,21 @@ function candidateEmailHtml({ fullName, position, experience, phone, address, cv
 }
 
 function hrEmailHtml({ fullName, email, phone, position, experience, address, coverLetter, cvFile }) {
-  fullName    = nfc(fullName);
-  position    = nfc(position);
-  experience  = nfc(experience);
-  phone       = nfc(phone);
-  address     = nfc(address);
+  fullName = nfc(fullName);
+  position = nfc(position);
+  experience = nfc(experience);
+  phone = nfc(phone);
+  address = nfc(address);
   coverLetter = nfc(coverLetter);
-  email       = nfc(email);
+  email = nfc(email);
 
   const rows = [
-    { label: 'H&#7885; t&#234;n',           value: `<strong style="color:${DARK};">${fullName}</strong>` },
-    { label: 'Email',                        value: `<a href="mailto:${email}" style="color:${RED};text-decoration:none;">${email}</a>` },
+    { label: 'H&#7885; t&#234;n', value: `<strong style="color:${DARK};">${fullName}</strong>` },
+    { label: 'Email', value: `<a href="mailto:${email}" style="color:${RED};text-decoration:none;">${email}</a>` },
     { label: '&#272;i&#7879;n tho&#7841;i', value: phone },
-    { label: 'V&#7883; tr&#237;',            value: `<strong style="color:${RED};">${position}</strong>` },
-    { label: 'Kinh nghi&#7879;m',            value: experience || '&mdash;' },
-    { label: '&#272;&#7883;a ch&#7881;',     value: address || '&mdash;' },
+    { label: 'V&#7883; tr&#237;', value: `<strong style="color:${RED};">${position}</strong>` },
+    { label: 'Kinh nghi&#7879;m', value: experience || '&mdash;' },
+    { label: '&#272;&#7883;a ch&#7881;', value: address || '&mdash;' },
   ];
 
   return `<!DOCTYPE html>
@@ -187,8 +187,8 @@ function hrEmailHtml({ fullName, email, phone, position, experience, address, co
           <td width="130" style="padding:12px 0;font-size:12px;color:#aaa;vertical-align:top;">CV &#273;&#237;nh k&#232;m</td>
           <td style="padding:12px 0;">
             ${cvFile
-              ? `<span style="background:#edf7ed;color:#27ae60;padding:3px 10px;border-radius:20px;font-size:12px;">&#10003; ${nfc(cvFile.originalname)}</span>`
-              : `<span style="color:#bbb;font-size:12px;">Kh&#244;ng c&#243;</span>`}
+      ? `<span style="background:#edf7ed;color:#27ae60;padding:3px 10px;border-radius:20px;font-size:12px;">&#10003; ${nfc(cvFile.originalname)}</span>`
+      : `<span style="color:#bbb;font-size:12px;">Kh&#244;ng c&#243;</span>`}
           </td>
         </tr>
       </table>
