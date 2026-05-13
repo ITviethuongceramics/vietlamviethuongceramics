@@ -7,7 +7,7 @@ const rssCache = new NodeCache({ stdTTL: 300, checkperiod: 60 }); // 5 phút
 const FEEDS = {
   'tat-ca':       'https://viethuongceramics.com/feed/',
   'tin-tuc':      'https://viethuongceramics.com/tin-tuc/feed/',
-  'noi-bo':       'https://viethuongceramics.com/category/noi-bo-su-kien/feed/',
+  'noi-bo':       'https://viethuongceramics.com/feed/?cat=121',  // ← sửa
   'tin-san-pham': 'https://viethuongceramics.com/category/tin-san-pham/feed/',
 };
 
@@ -77,7 +77,7 @@ router.get('/wordpress', async (req, res) => {
     const response = await fetch(feedUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+        
       },
       signal: AbortSignal.timeout(8000),
     });
@@ -119,6 +119,7 @@ router.get('/', async (req, res) => {
     });
     if (!response.ok) throw new Error(`Feed trả về HTTP ${response.status}`);
     const xml = await response.text();
+    console.log('[RSS XML đầu]', xml.substring(0, 500));
     const items = parseXML(xml).slice(0, count);
     rssCache.set(cacheKey, items);
     res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
