@@ -72,7 +72,7 @@ router.get('/wordpress', async (req, res) => {
   if (cached) return res.json({ status: 'ok', count: cached.length, items: cached, cached: true });
 
   try {
-    // ✅ Dùng RSS feed thay vì REST API — tránh bị Imunify360 block
+
     const feedUrl = `https://viethuongceramics.com/category/noi-bo-su-kien/feed/`;
 const response = await fetch(feedUrl, {
   headers: {
@@ -86,7 +86,10 @@ const response = await fetch(feedUrl, {
 
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const xml = await response.text();
+    console.log('[RSS XML length]', xml.length);
+console.log('[RSS XML đầu]', xml.substring(0, 300));
     const items = parseXML(xml).slice(0, count);
+    console.log('[RSS items count]', items.length);
 
     rssCache.set(cacheKey, items);
     res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
