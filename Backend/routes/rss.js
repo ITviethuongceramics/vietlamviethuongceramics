@@ -87,15 +87,21 @@ const response = await fetch(url, {
   signal: AbortSignal.timeout(15000),
 });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const posts = await response.json();
+const posts = await response.json();
 
-    const items = posts.map(p => ({
-      title: p.title?.rendered || '',
-      link: p.link,
-      date: p.date,
-      description: p.excerpt?.rendered?.replace(/<[^>]*>/g, '').trim() || '',
-      thumbnail: p._embedded?.['wp:featuredmedia']?.[0]?.source_url || null,
-    }));
+// Fix: kiểm tra posts có phải array không
+if (!Array.isArray(posts)) {
+  console.error('[WordPress API] Unexpected response:', JSON.stringify(posts).slice(0, 200));
+  throw new Error(`WordPress trả về không hợp lệ: ${JSON.stringify(posts).slice(0, 100)}`);
+}
+
+const items = posts.map(p => ({
+  title: p.title?.rendered || '',
+  link: p.link,
+  date: p.date,
+  description: p.excerpt?.rendered?.replace(/<[^>]*>/g, '').trim() || '',
+  thumbnail: p._embedded?.['wp:featuredmedia']?.[0]?.source_url || null,
+}));
 
     // Lưu cache
     rssCache.set(cacheKey, items);
