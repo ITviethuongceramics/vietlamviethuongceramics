@@ -3,6 +3,78 @@ const router  = express.Router();
 const pool    = require('../data/db');
 const { authMiddleware } = require('./auth');
 
+// ──────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────
+
+/** Fisher-Yates shuffle — trả về mảng mới, không mutate */
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/**
+ * Tạo snapshot câu hỏi đã shuffle cho 1 ứng viên.
+ * - Thứ tự câu hỏi bị xáo trộn
+ * - Với câu trắc nghiệm / multi_select: thứ tự đáp án cũng bị xáo trộn
+ * - correct_answer được map lại theo key mới sau khi shuffle đáp án
+ * - KHÔNG lưu correct_answer vào snapshot (ứng viên không được biết)
+ */
+function buildShuffledSnapshot(questions) {
+  const shuffledQs = shuffleArray(questions);
+
+  return shuffledQs.map((q, newOrder) => {
+    const base = {
+      original_id:   q.id,           // để map câu trả lời về question_id gốc
+      display_order: newOrder + 1,
+      question_type: q.question_type,
+      content:       q.content,
+      points:        q.points,
+      ai_graded:     q.ai_graded,
+      ai_rubric:     q.ai_rubric     || null,
+      speaking_prompt: q.speaking_prompt || null,
+    };
+
+    // Xáo trộn đáp án cho trắc nghiệm / multi_select
+    if (['multiple_choice', 'multi_select'].includes(q.question_type) && q.options) {
+      const originalOptions = typeof q.options === 'string'
+        ? JSON.parse(q.options)
+        : q.options;
+
+      // Shuffle thứ tự các lựa chọn
+      const shuffledOptions = shuffleArray(originalOptions);
+
+      // Gán lại key A/B/C/D theo thứ tự mới
+      const keys = ['A', 'B', 'C', 'D', 'E', 'F'];
+      const remappedOptions = shuffledOptions.map((opt, idx) => ({
+        key:         keys[idx],
+        text:        opt.text,
+        original_key: opt.key,   // lưu key gốc để chấm điểm sau này
+      }));
+
+      // Map correct_answer sang key mới (KHÔNG expose ra client)
+      const originalCorrect = q.correct_answer; // "A" hoặc "A,B"
+      const correctKeys     = originalCorrect ? originalCorrect.split(',').map(k => k.trim()) : [];
+      const newCorrectKeys  = correctKeys.map(ck => {
+        const found = remappedOptions.find(o => o.original_key === ck);
+        return found ? found.key : ck;
+      });
+
+      base.options              = remappedOptions;
+      base.correct_answer_mapped = newCorrectKeys.join(','); // dùng để chấm, KHÔNG gửi cho ứng viên
+    } else {
+      base.options               = null;
+      base.correct_answer_mapped = q.correct_answer || null;
+    }
+
+    return base;
+  });
+}
+
 // ============================================================
 // TESTS — Quản lý bộ đề
 // ============================================================
@@ -26,9 +98,8 @@ router.get('/', authMiddleware, async (req, res) => {
     `;
     const params = [];
 
-    if (type)      { query += ' AND t.type = ?';      params.push(type); }
-    if (is_active !== undefined) {
-                     query += ' AND t.is_active = ?'; params.push(is_active); }
+    if (type)                  { query += ' AND t.type = ?';      params.push(type); }
+    if (is_active !== undefined) { query += ' AND t.is_active = ?'; params.push(is_active); }
 
     query += ' GROUP BY t.id ORDER BY t.created_at DESC';
 
@@ -63,41 +134,6 @@ router.get('/:id', authMiddleware, async (req, res) => {
 });
 
 // POST /api/tests — Tạo bộ đề mới (kèm câu hỏi)
-/**
- * Body mẫu:
- * {
- *   "title": "Test Excel/Word cơ bản",
- *   "type": "excel_word",
- *   "time_limit": 30,
- *   "passing_score": 60,
- *   "questions": [
- *     {
- *       "question_type": "multiple_choice",
- *       "order": 1,
- *       "content": "Phím tắt để lưu file trong Excel là?",
- *       "options": [
- *         { "key": "A", "text": "Ctrl + S" },
- *         { "key": "B", "text": "Ctrl + P" },
- *         { "key": "C", "text": "Ctrl + Z" },
- *         { "key": "D", "text": "Alt + F4" }
- *       ],
- *       "correct_answer": "A",
- *       "points": 10,
- *       "ai_graded": 0
- *     },
- *     {
- *       "question_type": "reading",
- *       "order": 2,
- *       "content": "Read the following passage and answer...",
- *       "options": null,
- *       "correct_answer": null,
- *       "points": 20,
- *       "ai_graded": 1,
- *       "ai_rubric": "Chấm theo tiêu chí: hiểu đúng ý chính (10đ), dùng từ chính xác (10đ)"
- *     }
- *   ]
- * }
- */
 router.post('/', authMiddleware, async (req, res) => {
   const conn = await pool.getConnection();
   try {
@@ -105,22 +141,20 @@ router.post('/', authMiddleware, async (req, res) => {
 
     const {
       title,
-      type         = 'custom',
-      time_limit   = 30,
+      type          = 'custom',
+      time_limit    = 30,
       passing_score = 60,
-      questions    = []
+      questions     = []
     } = req.body;
 
-    if (!title) return res.status(400).json({ message: 'Thiếu tên bộ đề' });
+    if (!title)            return res.status(400).json({ message: 'Thiếu tên bộ đề' });
     if (!questions.length) return res.status(400).json({ message: 'Bộ đề cần ít nhất 1 câu hỏi' });
 
-    // Validate type
     const validTypes = ['excel_word', 'typing', 'english', 'chinese', 'custom'];
     if (!validTypes.includes(type)) {
       return res.status(400).json({ message: `type phải là: ${validTypes.join(' | ')}` });
     }
 
-    // Tạo bộ đề
     const [result] = await conn.query(
       `INSERT INTO tests (title, type, time_limit, passing_score, created_by)
        VALUES (?, ?, ?, ?, ?)`,
@@ -128,7 +162,6 @@ router.post('/', authMiddleware, async (req, res) => {
     );
     const testId = result.insertId;
 
-    // Insert câu hỏi
     for (const q of questions) {
       const {
         question_type  = 'multiple_choice',
@@ -143,12 +176,10 @@ router.post('/', authMiddleware, async (req, res) => {
 
       if (!content) throw new Error('Câu hỏi thiếu nội dung (content)');
 
-      // Validate: câu trắc nghiệm phải có correct_answer
       if (['multiple_choice', 'multi_select'].includes(question_type) && !correct_answer) {
         throw new Error(`Câu hỏi trắc nghiệm thứ ${order} thiếu correct_answer`);
       }
 
-      // Validate: typing_sample chỉ được có 1 câu trong bộ đề
       if (question_type === 'typing_sample') {
         const typingCount = questions.filter(x => x.question_type === 'typing_sample').length;
         if (typingCount > 1) throw new Error('Bộ đề typing chỉ được có 1 đoạn văn mẫu');
@@ -159,23 +190,16 @@ router.post('/', authMiddleware, async (req, res) => {
            (test_id, question_type, \`order\`, content, options, correct_answer, points, ai_graded, ai_rubric)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          testId,
-          question_type,
-          order,
-          content,
+          testId, question_type, order, content,
           options ? JSON.stringify(options) : null,
-          correct_answer,
-          points,
-          ai_graded ? 1 : 0,
-          ai_rubric
+          correct_answer, points, ai_graded ? 1 : 0, ai_rubric
         ]
       );
     }
 
     await conn.commit();
 
-    // Trả về bộ đề vừa tạo kèm câu hỏi
-    const [newTest]  = await conn.query('SELECT * FROM tests WHERE id = ?', [testId]);
+    const [newTest]      = await conn.query('SELECT * FROM tests WHERE id = ?', [testId]);
     const [newQuestions] = await conn.query(
       'SELECT * FROM test_questions WHERE test_id = ? ORDER BY `order`',
       [testId]
@@ -212,6 +236,112 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// PUT /api/tests/:id/full — Cập nhật bộ đề + toàn bộ câu hỏi
+router.put('/:id/full', authMiddleware, async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const {
+      title, type, time_limit, passing_score, is_active,
+      questions = []
+    } = req.body;
+
+    const [tests] = await conn.query('SELECT id FROM tests WHERE id = ?', [req.params.id]);
+    if (!tests.length) return res.status(404).json({ message: 'Không tìm thấy bộ đề' });
+
+    await conn.query(
+      `UPDATE tests SET
+         title         = COALESCE(?, title),
+         type          = COALESCE(?, type),
+         time_limit    = COALESCE(?, time_limit),
+         passing_score = COALESCE(?, passing_score),
+         is_active     = COALESCE(?, is_active)
+       WHERE id = ?`,
+      [title, type, time_limit, passing_score, is_active, req.params.id]
+    );
+
+    if (questions.length) {
+      const toUpdate = questions.filter(q => q.id);
+      const toInsert = questions.filter(q => !q.id);
+      const keepIds  = toUpdate.map(q => q.id);
+
+      if (keepIds.length) {
+        await conn.query(
+          `DELETE FROM test_questions WHERE test_id = ? AND id NOT IN (?)`,
+          [req.params.id, keepIds]
+        );
+      } else {
+        await conn.query('DELETE FROM test_questions WHERE test_id = ?', [req.params.id]);
+      }
+
+      for (const q of toUpdate) {
+        await conn.query(
+          `UPDATE test_questions SET
+             question_type  = COALESCE(?, question_type),
+             \`order\`      = COALESCE(?, \`order\`),
+             content        = COALESCE(?, content),
+             options        = COALESCE(?, options),
+             correct_answer = COALESCE(?, correct_answer),
+             points         = COALESCE(?, points),
+             ai_graded      = COALESCE(?, ai_graded),
+             ai_rubric      = COALESCE(?, ai_rubric)
+           WHERE id = ? AND test_id = ?`,
+          [
+            q.question_type ?? null,
+            q.order         ?? null,
+            q.content       ?? null,
+            q.options ? JSON.stringify(q.options) : null,
+            q.correct_answer ?? null,
+            q.points         ?? null,
+            q.ai_graded !== undefined ? (q.ai_graded ? 1 : 0) : null,
+            q.ai_rubric ?? null,
+            q.id, req.params.id
+          ]
+        );
+      }
+
+      for (const q of toInsert) {
+        if (!q.content) throw new Error('Câu hỏi mới thiếu nội dung (content)');
+        await conn.query(
+          `INSERT INTO test_questions
+             (test_id, question_type, \`order\`, content, options, correct_answer, points, ai_graded, ai_rubric)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            req.params.id,
+            q.question_type  ?? 'multiple_choice',
+            q.order          ?? 1,
+            q.content,
+            q.options ? JSON.stringify(q.options) : null,
+            q.correct_answer ?? null,
+            q.points         ?? 10,
+            q.ai_graded      ? 1 : 0,
+            q.ai_rubric      ?? null
+          ]
+        );
+      }
+    }
+
+    await conn.commit();
+
+    const [updated]   = await conn.query('SELECT * FROM tests WHERE id = ?', [req.params.id]);
+    const [updatedQs] = await conn.query(
+      'SELECT * FROM test_questions WHERE test_id = ? ORDER BY `order`',
+      [req.params.id]
+    );
+
+    res.json({
+      message: 'Cập nhật bộ đề thành công',
+      test: { ...updated[0], questions: updatedQs }
+    });
+  } catch (err) {
+    await conn.rollback();
+    res.status(500).json({ message: err.message });
+  } finally {
+    conn.release();
+  }
+});
+
 // DELETE /api/tests/:id — Xóa bộ đề (chỉ được xóa nếu chưa assign)
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
@@ -235,7 +365,6 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 // QUESTIONS — Quản lý câu hỏi trong bộ đề
 // ============================================================
 
-// POST /api/tests/:id/questions — Thêm câu hỏi vào bộ đề
 router.post('/:id/questions', authMiddleware, async (req, res) => {
   try {
     const {
@@ -256,15 +385,9 @@ router.post('/:id/questions', authMiddleware, async (req, res) => {
          (test_id, question_type, \`order\`, content, options, correct_answer, points, ai_graded, ai_rubric)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        req.params.id,
-        question_type,
-        order,
-        content,
+        req.params.id, question_type, order, content,
         options ? JSON.stringify(options) : null,
-        correct_answer,
-        points,
-        ai_graded ? 1 : 0,
-        ai_rubric
+        correct_answer, points, ai_graded ? 1 : 0, ai_rubric
       ]
     );
     res.status(201).json({ message: 'Thêm câu hỏi thành công', id: result.insertId });
@@ -273,7 +396,6 @@ router.post('/:id/questions', authMiddleware, async (req, res) => {
   }
 });
 
-// PUT /api/tests/:id/questions/:qid — Sửa câu hỏi
 router.put('/:id/questions/:qid', authMiddleware, async (req, res) => {
   try {
     const { content, options, correct_answer, points, ai_graded, ai_rubric, order } = req.body;
@@ -290,13 +412,10 @@ router.put('/:id/questions/:qid', authMiddleware, async (req, res) => {
       [
         content,
         options ? JSON.stringify(options) : null,
-        correct_answer,
-        points,
+        correct_answer, points,
         ai_graded !== undefined ? (ai_graded ? 1 : 0) : null,
-        ai_rubric,
-        order,
-        req.params.qid,
-        req.params.id
+        ai_rubric, order,
+        req.params.qid, req.params.id
       ]
     );
     res.json({ message: 'Cập nhật câu hỏi thành công' });
@@ -305,7 +424,6 @@ router.put('/:id/questions/:qid', authMiddleware, async (req, res) => {
   }
 });
 
-// DELETE /api/tests/:id/questions/:qid — Xóa câu hỏi
 router.delete('/:id/questions/:qid', authMiddleware, async (req, res) => {
   try {
     await pool.query(
@@ -322,7 +440,7 @@ router.delete('/:id/questions/:qid', authMiddleware, async (req, res) => {
 // ASSIGNMENTS — Phân công bài test cho ứng viên
 // ============================================================
 
-// GET /api/tests/assignments/list — Danh sách tất cả assignment (HR xem)
+// GET /api/tests/assignments/list
 router.get('/assignments/list', authMiddleware, async (req, res) => {
   try {
     const { application_id, test_id, status } = req.query;
@@ -362,12 +480,7 @@ router.get('/assignments/list', authMiddleware, async (req, res) => {
   }
 });
 
-// POST /api/tests/assignments — Assign bài test cho ứng viên
-/**
- * Body: { application_id, test_id, deadline? }
- * Có thể assign nhiều ứng viên cùng lúc:
- * { application_ids: [1,2,3], test_id, deadline? }
- */
+// POST /api/tests/assignments — Assign bài test + tạo shuffled_questions
 router.post('/assignments', authMiddleware, async (req, res) => {
   const conn = await pool.getConnection();
   try {
@@ -377,7 +490,6 @@ router.post('/assignments', authMiddleware, async (req, res) => {
 
     if (!test_id) return res.status(400).json({ message: 'Thiếu test_id' });
 
-    // Hỗ trợ assign 1 hoặc nhiều ứng viên cùng lúc
     const appIds = application_ids?.length
       ? application_ids
       : application_id
@@ -397,30 +509,34 @@ router.post('/assignments', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'Bộ đề không tồn tại hoặc đã bị tắt' });
     }
 
+    // Lấy toàn bộ câu hỏi của bộ đề (dùng để shuffle)
+    const [questions] = await conn.query(
+      'SELECT * FROM test_questions WHERE test_id = ? ORDER BY `order` ASC',
+      [test_id]
+    );
+
     const results = { success: [], skipped: [], errors: [] };
 
     for (const appId of appIds) {
       try {
-        // Kiểm tra ứng viên tồn tại
-       // Sau chỗ check ứng viên tồn tại, thêm vào:
-const [apps] = await conn.query(
-  'SELECT id, full_name, email, status FROM applications WHERE id = ?',
-  [appId]
-);
-if (!apps.length) {
-  results.errors.push({ application_id: appId, reason: 'Không tìm thấy ứng viên' });
-  continue;
-}
+        const [apps] = await conn.query(
+          'SELECT id, full_name, email, status FROM applications WHERE id = ?',
+          [appId]
+        );
+        if (!apps.length) {
+          results.errors.push({ application_id: appId, reason: 'Không tìm thấy ứng viên' });
+          continue;
+        }
 
-// ← THÊM ĐOẠN NÀY
-if (apps[0].status !== 'interviewing') {
-  results.errors.push({
-    application_id: appId,
-    name: apps[0].full_name,
-    reason: 'Ứng viên chưa ở trạng thái "Chờ phỏng vấn" — không thể giao bài test'
-  });
-  continue;
-}
+        if (apps[0].status !== 'interviewing') {
+          results.errors.push({
+            application_id: appId,
+            name: apps[0].full_name,
+            reason: 'Ứng viên chưa ở trạng thái "Chờ phỏng vấn" — không thể giao bài test'
+          });
+          continue;
+        }
+
         // Kiểm tra đã assign chưa
         const [existing] = await conn.query(
           'SELECT id, status FROM test_assignments WHERE application_id = ? AND test_id = ?',
@@ -435,13 +551,21 @@ if (apps[0].status !== 'interviewing') {
           continue;
         }
 
+        // ── Tạo snapshot câu hỏi đã shuffle riêng cho ứng viên này ──
+        const shuffledSnapshot = buildShuffledSnapshot(questions);
+
         await conn.query(
-          `INSERT INTO test_assignments (application_id, test_id, assigned_by, deadline)
-           VALUES (?, ?, ?, ?)`,
-          [appId, test_id, req.user.id, deadline || null]
+          `INSERT INTO test_assignments
+             (application_id, test_id, assigned_by, deadline, shuffled_questions)
+           VALUES (?, ?, ?, ?, ?)`,
+          [appId, test_id, req.user.id, deadline || null, JSON.stringify(shuffledSnapshot)]
         );
 
-        results.success.push({ application_id: appId, name: apps[0].full_name, email: apps[0].email });
+        results.success.push({
+          application_id: appId,
+          name:  apps[0].full_name,
+          email: apps[0].email
+        });
       } catch (innerErr) {
         results.errors.push({ application_id: appId, reason: innerErr.message });
       }
@@ -451,7 +575,7 @@ if (apps[0].status !== 'interviewing') {
 
     res.status(201).json({
       message: `Assign thành công ${results.success.length}/${appIds.length} ứng viên`,
-      test: tests[0].title,
+      test:    tests[0].title,
       results
     });
   } catch (err) {
@@ -467,7 +591,6 @@ router.put('/assignments/:id', authMiddleware, async (req, res) => {
   try {
     const { deadline, status } = req.body;
 
-    // Chỉ cho phép HR set lại về pending (reset) hoặc expired
     const allowedStatus = ['pending', 'expired'];
     if (status && !allowedStatus.includes(status)) {
       return res.status(400).json({
@@ -506,11 +629,11 @@ router.delete('/assignments/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/tests/assignments/:id/answers — HR xem câu trả lời của ứng viên
+// GET /api/tests/assignments/:id/answers — HR xem câu trả lời
 router.get('/assignments/:id/answers', authMiddleware, async (req, res) => {
   try {
     const [assignment] = await pool.query(
-      `SELECT ta.*, ap.full_name, ap.email, t.title AS test_title
+      `SELECT ta.*, ap.full_name, ap.email, t.title AS test_title, t.type AS test_type
        FROM test_assignments ta
        JOIN applications ap ON ap.id = ta.application_id
        JOIN tests         t  ON t.id  = ta.test_id
@@ -545,6 +668,52 @@ router.get('/assignments/:id/answers', authMiddleware, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
+// GET /api/tests/assignments/:id/questions — Ứng viên lấy câu hỏi đã shuffle
+// Trả về snapshot đã shuffle, KHÔNG có correct_answer_mapped
+router.get('/assignments/:id/questions', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT ta.shuffled_questions, ta.status, ta.deadline,
+              t.title, t.time_limit, t.type
+       FROM test_assignments ta
+       JOIN tests t ON t.id = ta.test_id
+       WHERE ta.id = ?`,
+      [req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ message: 'Không tìm thấy bài test' });
+
+    const row = rows[0];
+
+    if (row.status === 'expired') {
+      return res.status(403).json({ message: 'Bài test đã hết hạn' });
+    }
+
+    // Parse snapshot
+    let questions = row.shuffled_questions
+      ? (typeof row.shuffled_questions === 'string'
+          ? JSON.parse(row.shuffled_questions)
+          : row.shuffled_questions)
+      : [];
+
+    // Xóa correct_answer_mapped trước khi gửi cho ứng viên
+    questions = questions.map(({ correct_answer_mapped, ...q }) => q);
+
+    res.json({
+      assignment_id: req.params.id,
+      title:         row.title,
+      time_limit:    row.time_limit,
+      type:          row.type,
+      status:        row.status,
+      deadline:      row.deadline,
+      questions,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// GET /api/tests/assignments/:id/lock-status
 router.get('/assignments/:id/lock-status', authMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query(
@@ -565,41 +734,45 @@ router.get('/assignments/:id/lock-status', authMiddleware, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
- 
-// POST /api/tests/assignments/:id/reset
-// HR reset bài đang làm của ứng viên về pending
-// Xóa toàn bộ câu trả lời + kết quả cũ, mở khóa nếu bị khóa
+
+// POST /api/tests/assignments/:id/reset — HR reset bài về pending
 router.post('/assignments/:id/reset', authMiddleware, async (req, res) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
- 
+
     const [rows] = await conn.query(
-      'SELECT id, status FROM test_assignments WHERE id = ?',
+      'SELECT ta.id, ta.test_id FROM test_assignments WHERE id = ?',
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ message: 'Không tìm thấy assignment' });
- 
-    // Xóa câu trả lời cũ
-    await conn.query('DELETE FROM test_answers WHERE assignment_id = ?', [req.params.id]);
- 
-    // Xóa kết quả cũ
-    await conn.query('DELETE FROM test_results WHERE assignment_id = ?', [req.params.id]);
- 
-    // Reset assignment về pending, xóa lock + violation
+
+    // Xóa câu trả lời + kết quả cũ
+    await conn.query('DELETE FROM test_answers WHERE assignment_id = ?',  [req.params.id]);
+    await conn.query('DELETE FROM test_results WHERE assignment_id = ?',  [req.params.id]);
+
+    // Tạo lại snapshot shuffle mới (để ứng viên không nhớ thứ tự cũ)
+    const [questions] = await conn.query(
+      'SELECT * FROM test_questions WHERE test_id = ? ORDER BY `order` ASC',
+      [rows[0].test_id]
+    );
+    const newSnapshot = buildShuffledSnapshot(questions);
+
+    // Reset assignment
     await conn.query(
       `UPDATE test_assignments
-       SET status          = 'pending',
-           started_at      = NULL,
-           submitted_at    = NULL,
-           is_locked       = 0,
-           violation_count = 0,
-           lock_reason     = NULL,
-           locked_at       = NULL
+       SET status             = 'pending',
+           started_at         = NULL,
+           submitted_at       = NULL,
+           is_locked          = 0,
+           violation_count    = 0,
+           lock_reason        = NULL,
+           locked_at          = NULL,
+           shuffled_questions = ?
        WHERE id = ?`,
-      [req.params.id]
+      [JSON.stringify(newSnapshot), req.params.id]
     );
- 
+
     await conn.commit();
     res.json({ message: 'Reset bài thành công. Ứng viên có thể làm lại từ đầu.' });
   } catch (err) {
@@ -609,18 +782,17 @@ router.post('/assignments/:id/reset', authMiddleware, async (req, res) => {
     conn.release();
   }
 });
- 
-// DELETE /api/tests/assignments/:id/force
-// HR xóa hoàn toàn assignment (kể cả đã nộp/chấm)
+
+// DELETE /api/tests/assignments/:id/force — HR xóa hoàn toàn assignment
 router.delete('/assignments/:id/force', authMiddleware, async (req, res) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
- 
-    await conn.query('DELETE FROM test_results  WHERE assignment_id = ?', [req.params.id]);
-    await conn.query('DELETE FROM test_answers  WHERE assignment_id = ?', [req.params.id]);
-    await conn.query('DELETE FROM test_assignments WHERE id = ?',          [req.params.id]);
- 
+
+    await conn.query('DELETE FROM test_results     WHERE assignment_id = ?', [req.params.id]);
+    await conn.query('DELETE FROM test_answers     WHERE assignment_id = ?', [req.params.id]);
+    await conn.query('DELETE FROM test_assignments WHERE id = ?',             [req.params.id]);
+
     await conn.commit();
     res.json({ message: 'Đã xóa hoàn toàn assignment' });
   } catch (err) {
@@ -630,4 +802,5 @@ router.delete('/assignments/:id/force', authMiddleware, async (req, res) => {
     conn.release();
   }
 });
+
 module.exports = router;

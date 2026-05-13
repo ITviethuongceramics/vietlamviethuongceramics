@@ -72,9 +72,10 @@ const storage = multer.diskStorage({
   },
 });
 
+// Dòng này trong file backend
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 }, // ✅ tăng từ 5MB lên 10MB
   fileFilter: (req, file, cb) => {
     const allowed = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'];
     const ext = path.extname(file.originalname).toLowerCase();
@@ -482,6 +483,17 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
+});
+
+// ── ERROR HANDLER ─────────────────────────────────────────────  ← THÊM VÀO ĐÂY
+router.use((err, req, res, next) => {
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({ success: false, message: 'File quá lớn, vui lòng upload file dưới 10MB.' });
+  }
+  if (err.message) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+  next(err);
 });
 
 module.exports = router;

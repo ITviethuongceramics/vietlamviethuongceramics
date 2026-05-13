@@ -1,5 +1,4 @@
 const { google } = require('googleapis');
-const fs = require('fs');
 const cloudinary = require('cloudinary').v2;
 
 cloudinary.config({
@@ -20,84 +19,101 @@ const auth = new google.auth.GoogleAuth({
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
+// ─── Upload CV lên Cloudinary ───────────────────────────────────────────────
 async function uploadCV(filePath, fileName) {
-  const result = await cloudinary.uploader.upload(filePath, {
-    resource_type:   'image',
-    folder:          'cv-viet-huong',
-    use_filename:    true,
-    unique_filename: true,
-  });
-
-  const viewableUrl = result.secure_url.replace(
-    '/raw/upload/',
-    '/raw/upload/fl_attachment:false/'
-  );
-
-  return viewableUrl;
+  try {
+    const result = await cloudinary.uploader.upload(filePath, {
+      resource_type:   'auto',        // ✅ auto để nhận PDF/DOC/ảnh
+      folder:          'cv-viet-huong',
+      use_filename:    true,
+      unique_filename: true,
+    });
+    return result.secure_url;
+  } catch (err) {
+    console.error('[CLOUDINARY ERROR]', err.message);
+    throw err;
+  }
 }
 
-
+// ─── Helpers ────────────────────────────────────────────────────────────────
 function formatDateTime(isoString) {
-  const d = new Date(isoString);
+  const d     = new Date(isoString);
   const vnDate = new Date(d.getTime() + 7 * 60 * 60 * 1000);
-  const year    = vnDate.getUTCFullYear();
-  const month   = String(vnDate.getUTCMonth() + 1).padStart(2, '0');
-  const day     = String(vnDate.getUTCDate()).padStart(2, '0');
-  const hours   = String(vnDate.getUTCHours()).padStart(2, '0');
-  const minutes = String(vnDate.getUTCMinutes()).padStart(2, '0');
-  const seconds = String(vnDate.getUTCSeconds()).padStart(2, '0');
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  const year   = vnDate.getUTCFullYear();
+  const month  = String(vnDate.getUTCMonth() + 1).padStart(2, '0');
+  const day    = String(vnDate.getUTCDate()).padStart(2, '0');
+  const hours  = String(vnDate.getUTCHours()).padStart(2, '0');
+  const mins   = String(vnDate.getUTCMinutes()).padStart(2, '0');
+  const secs   = String(vnDate.getUTCSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${mins}:${secs}`;
 }
 
 function formatMoney(num) {
   return new Intl.NumberFormat('vi-VN').format(num) + ' VNĐ';
 }
 
-
+// ─── Ghi hồ sơ ứng tuyển vào Trang tính1 ───────────────────────────────────
 async function appendToSheet(record) {
-  const sheets = google.sheets({ version: 'v4', auth });
-  await sheets.spreadsheets.values.append({
-    spreadsheetId:    process.env.GOOGLE_SHEET_ID,
-    range:            'Trang tính1!A:I',
-    valueInputOption: 'USER_ENTERED',
-    requestBody: {
-      values: [[
-        record.id,
-        record.fullName,
-        record.email,
-        "'" + record.phone,
-        record.position,
-        record.experience || '',
-        record.address    || '',
-        record.cvFileName || 'Không có',
-        formatDateTime(record.receivedAt),
-      ]],
-    },
-  });
+  try {
+    const client = await auth.getClient();                       
+    const sheets = google.sheets({ version: 'v4', auth: client });
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId:    process.env.GOOGLE_SHEET_ID,
+      range:            'HoSo!A1',                         // ✅ chỉ định rõ ô bắt đầu
+      valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS',
+      requestBody: {
+        values: [[
+          record.id,
+          record.fullName,
+          record.email,
+          "'" + record.phone,
+          record.position,
+          record.experience  || '',
+          record.address     || '',
+          record.cvFileName  || 'Không có',
+          formatDateTime(record.receivedAt),
+        ]],
+      },
+    });
+
+    console.log('[SHEET] Ghi hồ sơ thành công:', record.email);
+  } catch (err) {
+    console.error('[SHEET ERROR] appendToSheet:', err.message);
+    throw err;
+  }
 }
 
-
+// ─── Ghi offer letter vào Trang tính2 ───────────────────────────────────────
 async function appendOfferToSheet({ fullName, email, offerPosition, startDate, salary, probationSalaryPercent, probationSalary }) {
-  const sheets = google.sheets({ version: 'v4', auth });
+  try {
+    const client = await auth.getClient();                        // ✅ resolve auth
+    const sheets = google.sheets({ version: 'v4', auth: client });
 
-  await sheets.spreadsheets.values.append({
-    spreadsheetId:    process.env.GOOGLE_SHEET_ID,
-    range:            'Trang tính2!A:G',
-    valueInputOption: 'USER_ENTERED',
-    requestBody: {
-      values: [[
-        fullName,
-        email,
-        offerPosition,
-        startDate,
-        formatMoney(salary),
-        `${probationSalaryPercent}% = ${formatMoney(probationSalary)}`,
-        new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
-      ]],
-    },
-  });
+    await sheets.spreadsheets.values.append({
+      spreadsheetId:    process.env.GOOGLE_SHEET_ID,
+      range:            'OfferLetter!A1',                         // ✅ chỉ định rõ ô bắt đầu
+      valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS',
+      requestBody: {
+        values: [[
+          fullName,
+          email,
+          offerPosition,
+          startDate,
+          formatMoney(salary),
+          `${probationSalaryPercent}% = ${formatMoney(probationSalary)}`,
+          new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+        ]],
+      },
+    });
 
-  console.log(`[SHEET OFFER] Đã ghi offer cho ${email} vào Trang tính2`);
+    console.log('[SHEET OFFER] Ghi offer thành công:', email);
+  } catch (err) {
+    console.error('[SHEET ERROR] appendOfferToSheet:', err.message);
+    throw err;
+  }
 }
 
 module.exports = { uploadCV, appendToSheet, appendOfferToSheet };

@@ -227,6 +227,9 @@ router.get('/candidate/me', candidateMiddleware, async (req, res) => {
 // ── GET /api/auth/users ──────────────────────────────────────
 router.get('/users', authMiddleware, async (req, res) => {
   try {
+    if (req.user.role !== 'superadmin') {
+      return res.status(403).json({ message: 'Chỉ Super Admin mới có quyền xem danh sách tài khoản' });
+    }
     const [rows] = await pool.query(
       'SELECT id, username, role, created_at FROM admins ORDER BY created_at DESC'
     );
@@ -238,7 +241,8 @@ router.get('/users', authMiddleware, async (req, res) => {
 
 // ── POST /api/auth/users ─────────────────────────────────────
 router.post('/users', authMiddleware, async (req, res) => {
-  try {
+  try
+   {
     const { username, password, role = 'admin' } = req.body;
     if (!username || !password) {
       return res.status(400).json({ message: 'Thiếu username hoặc password' });
@@ -280,6 +284,8 @@ router.delete('/users/:id', authMiddleware, async (req, res) => {
     if (req.user.id === parseInt(req.params.id)) {
       return res.status(400).json({ message: 'Không thể xóa tài khoản đang đăng nhập' });
     }
+  
+    await pool.query('UPDATE tests SET created_by = NULL WHERE created_by = ?', [req.params.id]);
     await pool.query('DELETE FROM admins WHERE id = ?', [req.params.id]);
     res.json({ message: 'Xóa tài khoản thành công' });
   } catch (err) {
