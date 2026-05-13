@@ -62,59 +62,37 @@ function parseXML(xml) {
   return items;
 }
 
-// ==================== ROUTE /wordpress (dùng REST API, có cache) ====================
+// ==================== ROUTE /wordpress ====================
 router.get('/wordpress', async (req, res) => {
   const categoryId = req.query.category || '121';
   const count = Math.min(parseInt(req.query.count ?? '20', 10), 50);
   const cacheKey = `wp_rest_${categoryId}_${count}`;
 
-  // Kiểm tra cache
   const cached = rssCache.get(cacheKey);
-  if (cached) {
-    // Trả về cache, đồng thời ghi log (tùy chọn)
-    return res.json({ status: 'ok', count: cached.length, items: cached, cached: true });
-  }
+  if (cached) return res.json({ status: 'ok', count: cached.length, items: cached, cached: true });
 
   try {
-    const url = `https://viethuongceramics.com/wp-json/wp/v2/posts?categories=${categoryId}&per_page=${count}&_embed`;
- // MỚI - thêm vào
-const response = await fetch(url, {
-  method: 'GET',
-  headers: {
-    'User-Agent': 'VietHuongCeramics-NewsProxy/1.0',
-    'Accept': 'application/json',
-  },
-  signal: AbortSignal.timeout(15000),
-});
+    // ✅ Dùng RSS feed thay vì REST API — tránh bị Imunify360 block
+    const feedUrl = `https://viethuongceramics.com/category/noi-bo-su-kien/feed/`;
+    const response = await fetch(feedUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-const posts = await response.json();
+    const xml = await response.text();
+    const items = parseXML(xml).slice(0, count);
 
-// Fix: kiểm tra posts có phải array không
-if (!Array.isArray(posts)) {
-  console.error('[WordPress API] Unexpected response:', JSON.stringify(posts).slice(0, 200));
-  throw new Error(`WordPress trả về không hợp lệ: ${JSON.stringify(posts).slice(0, 100)}`);
-}
-
-const items = posts.map(p => ({
-  title: p.title?.rendered || '',
-  link: p.link,
-  date: p.date,
-  description: p.excerpt?.rendered?.replace(/<[^>]*>/g, '').trim() || '',
-  thumbnail: p._embedded?.['wp:featuredmedia']?.[0]?.source_url || null,
-}));
-
-    // Lưu cache
     rssCache.set(cacheKey, items);
     res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
     res.json({ status: 'ok', count: items.length, items, cached: false });
   } catch (err) {
-    if (!['fetch failed', 'ENOTFOUND', 'ECONNREFUSED'].some(e => err.message.includes(e))) {
-      console.error('[WordPress API Error]', err.message);}
-    // Nếu có cache cũ (dù hết hạn) vẫn trả về để fallback
+    console.error('[WordPress RSS Error]', err.message);
     const staleCache = rssCache.get(cacheKey);
-    if (staleCache) {
-      return res.json({ status: 'ok', count: staleCache.length, items: staleCache, cached: true, stale: true });
-    }
+    if (staleCache) return res.json({ status: 'ok', count: staleCache.length, items: staleCache, cached: true, stale: true });
     res.status(502).json({ error: 'Không thể tải tin tức', detail: err.message });
   }
 });
