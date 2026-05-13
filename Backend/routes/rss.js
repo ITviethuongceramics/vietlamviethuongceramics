@@ -77,10 +77,15 @@ router.get('/wordpress', async (req, res) => {
 
   try {
     const url = `https://viethuongceramics.com/wp-json/wp/v2/posts?categories=${categoryId}&per_page=${count}&_embed`;
-    const response = await fetch(url, {
-      headers: { 'User-Agent': 'VietHuongCeramics-NewsProxy/1.0' },
-      signal: AbortSignal.timeout(8000),
-    });
+ // MỚI - thêm vào
+const response = await fetch(url, {
+  method: 'GET',
+  headers: {
+    'User-Agent': 'VietHuongCeramics-NewsProxy/1.0',
+    'Accept': 'application/json',
+  },
+  signal: AbortSignal.timeout(15000),
+});
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const posts = await response.json();
 
