@@ -834,3 +834,52 @@ flex-wrap: wrap;
   color: $gray-500;
   margin-right: 4px;
 }
+// ── Answer options (trong result modal) ───────────────────
+.tm-answer-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 8px;
+}
+
+.tm-answer-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: $radius;
+  border: 1px solid $gray-200;
+  background: $gray-50;
+  font-size: 13px;
+  color: $gray-600;
+
+  &__key {
+    font-weight: 700;
+    font-size: 12px;
+    min-width: 18px;
+    color: $gray-500;
+  }
+
+  &.is-correct {
+    background: $success-bg;
+    border-color: darken($success-bg, 6%);
+    color: $success;
+    font-weight: 500;
+    .tm-answer-option__key { color: $success; }
+  }
+
+  &.is-wrong {
+    background: $danger-bg;
+    border-color: darken($danger-bg, 6%);
+    color: $danger;
+    .tm-answer-option__key { color: $danger; }
+  }
+
+  &.is-selected-correct {
+    background: $success-bg;
+    border-color: darken($success-bg, 6%);
+    color: $success;
+    font-weight: 600;
+    .tm-answer-option__key { color: $success; }
+  }
+}

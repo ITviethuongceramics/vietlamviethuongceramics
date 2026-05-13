@@ -12,6 +12,106 @@ const headers = () => ({
 const MAX_VIOLATIONS = 2;
 const TAB_OUT_TIMEOUT_MS = 5000;
 
+// ──────────────────────────────────────────────────────────────
+// Shuffle helpers
+// ──────────────────────────────────────────────────────────────
+
+/** Fisher-Yates — trả về mảng mới, không mutate */
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/**
+ * Shuffle câu hỏi + đáp án cho ứng viên.
+ * - Thứ tự câu hỏi bị xáo trộn
+ * - Với multiple_choice / multi_select:
+ *   + Thứ tự đáp án bị xáo trộn
+ *   + Key hiển thị (A/B/C/D) được gán lại theo thứ tự mới
+ *   + Mỗi option giữ thêm `original_key` để map câu trả lời về key gốc khi submit
+ * - Câu typing_sample KHÔNG shuffle (thứ tự gõ không xáo trộn được)
+ */
+
+function buildShuffledTest(questions) {
+  const FIXED_TYPES = ['typing_sample', 'speaking', 'short_answer', 'reading'];
+
+  const fixedMap = {};
+  const shufflable = [];
+
+  questions.forEach((q, i) => {
+    if (FIXED_TYPES.includes(q.question_type)) {
+      fixedMap[i] = q;
+    } else {
+      shufflable.push(q);
+    }
+  });
+
+ const shuffled = shuffleArray(shufflable).map(q => {
+  if (!q.options) return q;
+
+  const originalOptions = typeof q.options === 'string'
+    ? JSON.parse(q.options)
+    : q.options;
+
+  if (!Array.isArray(originalOptions) || originalOptions.length === 0) return q;
+
+  // 👇 THÊM DÒNG NÀY ĐỂ XEM DATA THỰC TẾ
+  console.log('options raw:', JSON.stringify(originalOptions));
+
+  const keys = ['A', 'B', 'C', 'D', 'E', 'F'];
+  const shuffledOpts = shuffleArray(originalOptions).map((opt, idx) => ({
+    key:          keys[idx],
+    text:         opt.text,
+    original_key: opt.key ?? keys[idx],
+  }));
+
+  return { ...q, options: shuffledOpts };
+});
+  // Ghép lại: fixed giữ đúng vị trí gốc, còn lại điền từ shuffled
+  const result = [];
+  let cursor = 0;
+  for (let i = 0; i < questions.length; i++) {
+    if (fixedMap[i]) {
+      result.push(fixedMap[i]);
+    } else {
+      result.push(shuffled[cursor++]);
+    }
+  }
+
+  return result;
+}
+
+function mapAnswerToOriginal(question, displayAnswer) {
+  if (
+    !displayAnswer ||
+    !['multiple_choice', 'multi_select'].includes(question.question_type) ||
+    !question.options
+  ) {
+    return displayAnswer;
+  }
+
+  // Kiểm tra options có original_key không (tức là đã shuffle)
+  const hasOriginalKey = question.options.some(o => o.original_key);
+  if (!hasOriginalKey) return displayAnswer;
+
+  // multiple_choice: displayAnswer = "A"
+  // multi_select:    displayAnswer = "A,C"
+  const displayKeys = displayAnswer.split(',').map(k => k.trim());
+  const originalKeys = displayKeys.map(dk => {
+    const opt = question.options.find(o => o.key === dk);
+    return opt?.original_key ?? dk;
+  });
+
+  return originalKeys.sort().join(',');
+}
+
+// ──────────────────────────────────────────────────────────────
+// Anti-cheat hook
+// ──────────────────────────────────────────────────────────────
 function useAntiCheat({ assignmentId, onForceSubmit, isRequestingMic, isSubmitting }) {
   const [violations, setViolations] = useState(0);
   const [showWarning, setShowWarning] = useState(false);
@@ -19,10 +119,9 @@ function useAntiCheat({ assignmentId, onForceSubmit, isRequestingMic, isSubmitti
   const [forceSubmit, setForceSubmit] = useState(false);
 
   const violationsRef = useRef(0);
-  const tabOutTimer = useRef(null);
-  const isHidden = useRef(false);
-  const forcedRef = useRef(false);
-  const isSubmittingRef = useRef(false);
+  const tabOutTimer   = useRef(null);
+  const isHidden      = useRef(false);
+  const forcedRef     = useRef(false);
 
   const triggerForceSubmit = useCallback((reason) => {
     if (forcedRef.current) return;
@@ -37,7 +136,7 @@ function useAntiCheat({ assignmentId, onForceSubmit, isRequestingMic, isSubmitti
     fetch(`${API}/api/candidate/assignments/${assignmentId}/lock`, {
       method: 'POST', headers: headers(),
       body: JSON.stringify({ reason }),
-    }).catch(() => { });
+    }).catch(() => {});
 
     setForceSubmit(true);
     setWarningMsg('⛔ Bài thi đã bị khoá!\nBài sẽ được nộp tự động sau 3 giây.');
@@ -76,7 +175,6 @@ function useAntiCheat({ assignmentId, onForceSubmit, isRequestingMic, isSubmitti
       window.history.pushState(null, '', window.location.href);
       recordViolation('browser_back');
     };
-
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         if (isHidden.current) return;
@@ -90,7 +188,6 @@ function useAntiCheat({ assignmentId, onForceSubmit, isRequestingMic, isSubmitti
         if (tabOutTimer.current) { clearTimeout(tabOutTimer.current); tabOutTimer.current = null; }
       }
     };
-
     const handleBlur = () => {
       if (isHidden.current) return;
       if (isRequestingMic.current) return;
@@ -99,12 +196,10 @@ function useAntiCheat({ assignmentId, onForceSubmit, isRequestingMic, isSubmitti
       tabOutTimer.current = setTimeout(() => triggerForceSubmit('blur_5s'), TAB_OUT_TIMEOUT_MS);
       recordViolation('window_blur');
     };
-
     const handleFocus = () => {
       isHidden.current = false;
       if (tabOutTimer.current) { clearTimeout(tabOutTimer.current); tabOutTimer.current = null; }
     };
-
     const handleContextMenu = (e) => e.preventDefault();
     const handleKeyDown = (e) => {
       if (
@@ -146,10 +241,10 @@ function WarningOverlay({ msg, violations, forceSubmit, onClose }) {
   }, [countdown, forceSubmit]);
 
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    document.body.style.userSelect = 'none';
+    document.body.style.overflow    = 'hidden';
+    document.body.style.userSelect  = 'none';
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow   = '';
       document.body.style.userSelect = '';
     };
   }, []);
@@ -157,49 +252,37 @@ function WarningOverlay({ msg, violations, forceSubmit, onClose }) {
   return (
     <div
       className={`ct-warning-overlay ${forceSubmit ? 'ct-warning-overlay--critical' : ''}`}
-      onMouseDown={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
+      onMouseDown={e => e.stopPropagation()}
+      onClick={e => e.stopPropagation()}
     >
-      <div className="ct-warning-box" onClick={(e) => e.stopPropagation()}>
+      <div className="ct-warning-box" onClick={e => e.stopPropagation()}>
         <div className="ct-warning-icon">{forceSubmit ? '🚫' : '⚠️'}</div>
         <div className="ct-warning-title">
           {forceSubmit ? 'Bài thi đã bị khoá' : `Cảnh báo vi phạm (${violations}/${MAX_VIOLATIONS})`}
         </div>
         <div className="ct-warning-msg">{msg}</div>
-
         <div className="ct-warning-counter">
           <span>Lần vi phạm:</span>
           {Array.from({ length: MAX_VIOLATIONS }).map((_, i) => (
             <span key={i} className={`ct-dot ${i < violations ? 'ct-dot--filled' : ''}`} />
           ))}
         </div>
-
         {!forceSubmit && (
           <>
             <div className="ct-countdown">
               <div className="ct-countdown__bar">
-                <div className="ct-countdown__fill"
-                  style={{ width: `${((5 - countdown) / 5) * 100}%` }} />
+                <div className="ct-countdown__fill" style={{ width: `${((5 - countdown) / 5) * 100}%` }} />
               </div>
               <span className="ct-countdown__label">
-                {countdown > 0
-                  ? `Hãy đọc kỹ cảnh báo... (${countdown}s)`
-                  : '✓ Bạn có thể tiếp tục'}
+                {countdown > 0 ? `Hãy đọc kỹ cảnh báo... (${countdown}s)` : '✓ Bạn có thể tiếp tục'}
               </span>
             </div>
-            <button
-              className="ct-warning-btn"
-              onClick={onClose}
-              disabled={countdown > 0}
-            >
+            <button className="ct-warning-btn" onClick={onClose} disabled={countdown > 0}>
               {countdown > 0 ? `Chờ ${countdown}s...` : 'Tôi hiểu, tiếp tục làm bài'}
             </button>
           </>
         )}
-
-        {forceSubmit && (
-          <div className="ct-warning-submitting">⏳ Đang nộp bài tự động...</div>
-        )}
+        {forceSubmit && <div className="ct-warning-submitting">⏳ Đang nộp bài tự động...</div>}
       </div>
     </div>
   );
@@ -218,28 +301,22 @@ function Timer({ seconds, onExpire }) {
   return <div className={`ct-timer ${left < 120 ? 'ct-timer--urgent' : ''}`}>{m}:{s}</div>;
 }
 
-// ── SpeakingQuestion — đã fix cho iOS Safari ─────────────────
+// ── SpeakingQuestion ──────────────────────────────────────────
 function SpeakingQuestion({ question, assignmentId, onRecorded, isRequestingMic }) {
-  const [status, setStatus] = useState('idle');
-  const [errMsg, setErrMsg] = useState('');
+  const [status, setStatus]   = useState('idle');
+  const [errMsg, setErrMsg]   = useState('');
   const [audioUrl, setAudioUrl] = useState(null);
-  const mediaRef = useRef(null);
+  const mediaRef  = useRef(null);
   const chunksRef = useRef([]);
 
   const uploadAudio = async (blob, type) => {
     try {
-      const ext = type.includes('mp4') ? 'm4a'
-                : type.includes('ogg') ? 'ogg'
-                : 'webm';
+      const ext  = type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm';
       const form = new FormData();
       form.append('audio', blob, `speaking.${ext}`);
       const r = await fetch(
         `${API}/api/grading/assignments/${assignmentId}/speaking/${question.id}`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${localStorage.getItem('candidate_token')}` },
-          body: form
-        }
+        { method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('candidate_token')}` }, body: form }
       );
       const d = await r.json();
       if (r.ok) { setStatus('done'); onRecorded(question.id, d.audio_url); }
@@ -252,64 +329,41 @@ function SpeakingQuestion({ question, assignmentId, onRecorded, isRequestingMic 
 
   const startRecord = async () => {
     setErrMsg('');
-
-    // Kiểm tra MediaRecorder có được hỗ trợ không (một số trình duyệt cũ không có)
     if (typeof MediaRecorder === 'undefined') {
       setErrMsg('Trình duyệt không hỗ trợ thu âm. Vui lòng dùng Safari iOS 14.3+ hoặc Chrome.');
-      setStatus('error');
-      return;
+      setStatus('error'); return;
     }
-
     if (isRequestingMic) isRequestingMic.current = true;
-
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream   = await navigator.mediaDevices.getUserMedia({ audio: true });
       if (isRequestingMic) isRequestingMic.current = false;
-
-      // iOS Safari chỉ support audio/mp4 — đặt lên đầu danh sách ưu tiên
-      const mimeType = [
-        'audio/mp4',              // iOS Safari
-        'audio/webm;codecs=opus', // Chrome / Android
-        'audio/webm',
-        'audio/ogg',
-        '',                       // fallback mặc định của browser
-      ].find(t => t === '' || MediaRecorder.isTypeSupported(t));
-
+      const mimeType = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg', '']
+        .find(t => t === '' || MediaRecorder.isTypeSupported(t));
       let mr;
-      try {
-        mr = new MediaRecorder(stream, mimeType ? { mimeType } : {});
-      } catch {
-        // Nếu tạo với mimeType thất bại, thử không truyền mimeType
-        mr = new MediaRecorder(stream);
-      }
-
+      try { mr = new MediaRecorder(stream, mimeType ? { mimeType } : {}); }
+      catch { mr = new MediaRecorder(stream); }
       chunksRef.current = [];
       mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
-        // Lấy type thực tế mà trình duyệt đang dùng
         const actualType = mr.mimeType || mimeType || 'audio/mp4';
         const blob = new Blob(chunksRef.current, { type: actualType });
         setAudioUrl(URL.createObjectURL(blob));
         await uploadAudio(blob, actualType);
       };
-
       mediaRef.current = mr;
       mr.start();
       setStatus('recording');
-
     } catch (err) {
       if (isRequestingMic) isRequestingMic.current = false;
-      // Phân biệt rõ loại lỗi thay vì chỉ báo chung "Không thể truy cập microphone"
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')
         setErrMsg('Bạn chưa cấp quyền microphone. Vào Cài đặt > Safari > Microphone để bật.');
-      } else if (err.name === 'NotFoundError') {
+      else if (err.name === 'NotFoundError')
         setErrMsg('Không tìm thấy microphone trên thiết bị.');
-      } else if (err.name === 'NotSupportedError') {
+      else if (err.name === 'NotSupportedError')
         setErrMsg('Trình duyệt không hỗ trợ thu âm. Vui lòng dùng Safari iOS 14.3+ hoặc Chrome.');
-      } else {
+      else
         setErrMsg(`Lỗi: ${err.message || 'Không thể khởi động thu âm. Thử lại.'}`);
-      }
       setStatus('error');
     }
   };
@@ -340,7 +394,8 @@ function SpeakingQuestion({ question, assignmentId, onRecorded, isRequestingMic 
           <div className="ct-speaking__done">
             <span className="ct-check">✓</span> Đã ghi âm thành công
             {audioUrl && <audio controls src={audioUrl} className="ct-audio" />}
-            <button className="ct-rec-btn ct-rec-btn--redo" onClick={() => { setStatus('idle'); setAudioUrl(null); }}>
+            <button className="ct-rec-btn ct-rec-btn--redo"
+              onClick={() => { setStatus('idle'); setAudioUrl(null); }}>
               Ghi lại
             </button>
           </div>
@@ -363,9 +418,9 @@ function SpeakingQuestion({ question, assignmentId, onRecorded, isRequestingMic 
 // ============================================================
 export function CandidateTestListPage() {
   const [assignments, setAssignments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [name] = useState(localStorage.getItem('candidate_name') || '');
-  const navigate = useNavigate();
+  const [loading, setLoading]         = useState(true);
+  const [name]    = useState(localStorage.getItem('candidate_name') || '');
+  const navigate  = useNavigate();
   const [lockedIds, setLockedIds] = useState(
     () => JSON.parse(localStorage.getItem('locked_assignments') || '[]')
   );
@@ -392,15 +447,15 @@ export function CandidateTestListPage() {
   }, []);
 
   const statusLabel = {
-    pending: { text: 'Chưa làm', cls: 'pending' },
-    in_progress: { text: 'Đang làm', cls: 'progress' },
-    submitted: { text: 'Đã nộp', cls: 'submitted' },
-    graded: { text: 'Đã chấm', cls: 'graded' },
-    expired: { text: 'Hết hạn', cls: 'expired' },
+    pending:     { text: 'Chưa làm',    cls: 'pending'   },
+    in_progress: { text: 'Đang làm',    cls: 'progress'  },
+    submitted:   { text: 'Đã nộp',      cls: 'submitted' },
+    graded:      { text: 'Đã chấm',     cls: 'graded'    },
+    expired:     { text: 'Hết hạn',     cls: 'expired'   },
   };
   const typeLabel = {
     excel_word: 'Excel / Word', typing: 'Đánh máy',
-    english: 'Tiếng Anh', chinese: 'Tiếng Trung', custom: 'Tùy chỉnh',
+    english:    'Tiếng Anh',    chinese: 'Tiếng Trung', custom: 'Tùy chỉnh',
   };
 
   const logout = () => {
@@ -408,7 +463,7 @@ export function CandidateTestListPage() {
     navigate('/candidate');
   };
 
-  const isLocked = (id) => lockedIds.includes(String(id));
+  const isLocked = id => lockedIds.includes(String(id));
 
   return (
     <div className="ct-list-page">
@@ -430,11 +485,10 @@ export function CandidateTestListPage() {
         ) : (
           <div className="ct-cards">
             {assignments.map(a => {
-              const st = statusLabel[a.status] || { text: a.status, cls: '' };
-              const locked = isLocked(a.assignment_id);
-              const canDo = ['pending', 'in_progress'].includes(a.status) && !locked;
+              const st      = statusLabel[a.status] || { text: a.status, cls: '' };
+              const locked  = isLocked(a.assignment_id);
+              const canDo   = ['pending', 'in_progress'].includes(a.status) && !locked;
               const blocked = ['pending', 'in_progress'].includes(a.status) && locked;
-
               return (
                 <div key={a.assignment_id} className={`ct-test-card ${locked ? 'ct-test-card--locked' : ''}`}>
                   <div className="ct-test-card__head">
@@ -489,12 +543,14 @@ export default function CandidateTestPage() {
   const { assignment_id } = useParams();
   const navigate = useNavigate();
 
-  const [test, setTest] = useState(null);
-  const [answers, setAnswers] = useState({});
-  const [loading, setLoading] = useState(true);
+  // test lưu data đã shuffle — không bao giờ thay đổi sau khi set
+  const [test, setTest]         = useState(null);
+  const [answers, setAnswers]   = useState({});
+  const [loading, setLoading]   = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]       = useState('');
   const [submitted, setSubmitted] = useState(false);
+
   const isRequestingMic = useRef(false);
   const isSubmittingRef = useRef(false);
 
@@ -509,10 +565,17 @@ export default function CandidateTestPage() {
   const handleSubmit = useCallback(async () => {
     if (submitting) return;
     setSubmitting(true);
+    isSubmittingRef.current = true;
     try {
-      const answerList = Object.entries(answers).map(([question_id, answer]) => ({
-        question_id: parseInt(question_id), answer
-      }));
+      // Map câu trả lời về key gốc trước khi submit
+      const answerList = Object.entries(answers).map(([question_id, displayAnswer]) => {
+        const question = test?.questions?.find(q => String(q.id) === String(question_id));
+        const originalAnswer = question
+          ? mapAnswerToOriginal(question, displayAnswer)
+          : displayAnswer;
+        return { question_id: parseInt(question_id), answer: originalAnswer };
+      });
+
       const r = await fetch(`${API}/api/candidate/assignments/${assignment_id}/submit`, {
         method: 'POST', headers: headers(),
         body: JSON.stringify({ answers: answerList })
@@ -522,11 +585,17 @@ export default function CandidateTestPage() {
         setSubmitted(true);
         fetch(`${API}/api/grading/assignments/${assignment_id}/grade`, {
           method: 'POST', headers: headers()
-        }).catch(() => { });
-      } else { setError(d.message); }
-    } catch { setError('Lỗi kết nối'); }
-    finally { setSubmitting(false); }
-  }, [answers, assignment_id, submitting]);
+        }).catch(() => {});
+      } else {
+        setError(d.message);
+      }
+    } catch {
+      setError('Lỗi kết nối');
+    } finally {
+      setSubmitting(false);
+      isSubmittingRef.current = false;
+    }
+  }, [answers, assignment_id, submitting, test]);
 
   const { violations, showWarning, setShowWarning, warningMsg, forceSubmit } =
     useAntiCheat({ assignmentId: assignment_id, onForceSubmit: handleSubmit, isRequestingMic, isSubmitting: isSubmittingRef });
@@ -548,8 +617,15 @@ export default function CandidateTestPage() {
           setError('Bài thi này đã bị khóa do vi phạm quy định. Vui lòng liên hệ HR.');
           setLoading(false); return;
         }
-        if (d.message) { setError(d.message); setLoading(false); return; }
-        setTest(d); setLoading(false);
+        if (d.message && !d.questions) { setError(d.message); setLoading(false); return; }
+
+        // ── Shuffle câu hỏi + đáp án ngay sau khi nhận data ──
+        const shuffled = {
+          ...d,
+          questions: d.questions ? buildShuffledTest(d.questions) : [],
+        };
+        setTest(shuffled);
+        setLoading(false);
       })
       .catch(() => { setError('Không thể tải bài test'); setLoading(false); });
   }, [assignment_id]);
@@ -558,6 +634,7 @@ export default function CandidateTestPage() {
     setAnswers(prev => ({ ...prev, [qid]: value }));
   }, []);
 
+  // Multi-select dùng key hiển thị (đã shuffle) — map về original khi submit
   const handleMultiSelect = (qid, key) => {
     setAnswers(prev => {
       const cur = (prev[qid] || '').split(',').filter(Boolean);
@@ -570,8 +647,7 @@ export default function CandidateTestPage() {
   const confirmSubmit = () => {
     isSubmittingRef.current = true;
     if (!confirm('Bạn có chắc muốn nộp bài? Không thể chỉnh sửa sau khi nộp.')) {
-      isSubmittingRef.current = false;
-      return;
+      isSubmittingRef.current = false; return;
     }
     handleSubmit();
   };
@@ -639,7 +715,8 @@ export default function CandidateTestPage() {
                 {q.options.map(opt => (
                   <label key={opt.key} className={`ct-option ${answers[q.id] === opt.key ? 'selected' : ''}`}>
                     <input type="radio" name={`q_${q.id}`} value={opt.key}
-                      checked={answers[q.id] === opt.key} onChange={() => setAnswer(q.id, opt.key)} />
+                      checked={answers[q.id] === opt.key}
+                      onChange={() => setAnswer(q.id, opt.key)} />
                     <span className="ct-option__key">{opt.key}</span>
                     <span className="ct-option__text">{opt.text}</span>
                   </label>
@@ -653,7 +730,8 @@ export default function CandidateTestPage() {
                   const sel = (answers[q.id] || '').split(',').includes(opt.key);
                   return (
                     <label key={opt.key} className={`ct-option ${sel ? 'selected' : ''}`}>
-                      <input type="checkbox" checked={sel} onChange={() => handleMultiSelect(q.id, opt.key)} />
+                      <input type="checkbox" checked={sel}
+                        onChange={() => handleMultiSelect(q.id, opt.key)} />
                       <span className="ct-option__key">{opt.key}</span>
                       <span className="ct-option__text">{opt.text}</span>
                     </label>
@@ -678,9 +756,7 @@ export default function CandidateTestPage() {
                 question={q}
                 assignmentId={assignment_id}
                 timeLimit={60}
-                onDone={(result) => {
-                  setAnswer(q.id, JSON.stringify(result));
-                }}
+                onDone={result => setAnswer(q.id, JSON.stringify(result))}
               />
             )}
           </div>
@@ -705,7 +781,7 @@ export default function CandidateTestPage() {
 export function CandidateResultPage() {
   const { assignment_id } = useParams();
   const navigate = useNavigate();
-  const [result, setResult] = useState(null);
+  const [result, setResult]   = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -715,7 +791,7 @@ export function CandidateResultPage() {
   }, [assignment_id]);
 
   if (loading) return <div className="ct-loading ct-loading--page">Đang tải kết quả...</div>;
-  if (!result) return null;
+  if (!result)  return null;
 
   if (result.status === 'submitted') return (
     <div className="ct-done-page">
@@ -756,7 +832,8 @@ export function CandidateResultPage() {
       </div>
       <div className="ct-answers-detail">
         {result.answers?.map((a, i) => (
-          <div key={a.question_id} className={`ct-ans-item ${a.is_correct === 1 ? 'correct' : a.is_correct === 0 ? 'wrong' : ''}`}>
+          <div key={a.question_id}
+            className={`ct-ans-item ${a.is_correct === 1 ? 'correct' : a.is_correct === 0 ? 'wrong' : ''}`}>
             <div className="ct-ans-item__head">
               <span>Câu {i + 1}</span>
               <span className="ct-ans-score">{a.score ?? '?'}/{a.max_points} điểm</span>
@@ -767,30 +844,13 @@ export function CandidateResultPage() {
               {(() => {
                 try {
                   const r = JSON.parse(a.answer);
-                  if (r.wpm !== undefined) {
-                    return (
-                      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 4 }}>
-                        <span style={{
-                          background: '#fff8e6', border: '1px solid #f0b429',
-                          borderRadius: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600
-                        }}>
-                          ⌨️ {r.wpm} WPM
-                        </span>
-                        <span style={{
-                          background: '#f0fdf4', border: '1px solid #27ae60',
-                          borderRadius: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600
-                        }}>
-                          ✓ {r.accuracy}% chính xác
-                        </span>
-                        <span style={{
-                          background: '#f0f4ff', border: '1px solid #4a6cf7',
-                          borderRadius: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600
-                        }}>
-                          📝 {r.typedText?.split(/\s+/).filter(Boolean).length} từ đã gõ
-                        </span>
-                      </div>
-                    );
-                  }
+                  if (r.wpm !== undefined) return (
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 4 }}>
+                      <span style={{ background: '#fff8e6', border: '1px solid #f0b429', borderRadius: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600 }}>⌨️ {r.wpm} WPM</span>
+                      <span style={{ background: '#f0fdf4', border: '1px solid #27ae60', borderRadius: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600 }}>✓ {r.accuracy}% chính xác</span>
+                      <span style={{ background: '#f0f4ff', border: '1px solid #4a6cf7', borderRadius: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600 }}>📝 {r.typedText?.split(/\s+/).filter(Boolean).length} từ đã gõ</span>
+                    </div>
+                  );
                 } catch { /* không phải JSON */ }
                 return <span>{a.answer || '(Không trả lời)'}</span>;
               })()}

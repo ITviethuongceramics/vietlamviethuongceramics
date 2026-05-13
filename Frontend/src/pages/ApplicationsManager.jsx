@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import {
   Search, ChevronDown, X, FileText, Phone, Mail, Briefcase,
-  Clock, MapPin, Eye, CheckCircle, XCircle, AlertCircle,
-  ChevronLeft, ChevronRight, Save, Plus, User, Loader, Send, Trash2, Calendar
+ Clock, MapPin, Eye, CheckCircle, XCircle, AlertCircle,
+ChevronLeft, ChevronRight, Save, Plus, User, Loader, Send, Trash2, Calendar, Bookmark
 } from 'lucide-react';
 import './toast.scss';
 import { createPortal } from 'react-dom';
@@ -22,6 +22,14 @@ export default function ApplicationsManager({ token }) {
     full_name: '', email: '', phone: '', position: '',
     experience: '', address: '', cover_letter: '', cvFile: null
   });
+  const formatCurrency = (value) => {
+    if (!value && value !== 0) return '';
+    return Number(value).toLocaleString('vi-VN');
+  };
+
+  const parseCurrency = (str) => {
+    return str.replace(/\./g, '').replace(/[^0-9]/g, '');
+  };
   const [offerData, setOfferData] = useState({
     position: '',
     start_date: '',
@@ -39,7 +47,9 @@ export default function ApplicationsManager({ token }) {
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState({ message: '', type: '', visible: false });
   const [confirmModal, setConfirmModal] = useState({ visible: false, message: '', onConfirm: null });
-
+  const [salaryDisplay, setSalaryDisplay] = useState(
+    formatCurrency(offerData.salary)
+  );
   const showToast = (message, type = 'success') => {
     setToast({ message, type, visible: true });
     setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 3000);
@@ -117,7 +127,6 @@ export default function ApplicationsManager({ token }) {
       showToast('Thêm hồ sơ thành công!', 'success');
       fetchApplications();
 
-      // Gửi request ngầm, không await
       fetch(`${import.meta.env.VITE_API_URL}/applications/manual`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
@@ -231,6 +240,7 @@ export default function ApplicationsManager({ token }) {
     interviewing: { label: 'Chờ phỏng vấn', cls: 'adm-badge--interviewing', Icon: Calendar },
     passed: { label: 'Đạt', cls: 'adm-badge--passed', Icon: CheckCircle },
     failed: { label: 'Không đạt', cls: 'adm-badge--failed', Icon: XCircle },
+    reserve:{ label: 'Dự phòng',      cls: 'adm-badge--reserve',      Icon: Bookmark },
   };
   const appStatusInfo = (status) => STATUS_MAP[status] || { label: status, cls: '', Icon: AlertCircle };
 
@@ -336,6 +346,7 @@ export default function ApplicationsManager({ token }) {
             <option value="interviewing">Chờ phỏng vấn</option>
             <option value="passed">Đạt</option>
             <option value="failed">Không đạt</option>
+            <option value="reserve">Dự phòng</option>
           </select>
           <ChevronDown size={14} />
         </div>
@@ -596,8 +607,25 @@ export default function ApplicationsManager({ token }) {
                 <input type="number" value={offerData.probation_period} onChange={e => setOfferData({ ...offerData, probation_period: e.target.value })} min="0" max="12" />
               </div>
               <div className="adm-field">
-                <label>Mức lương Gross chính thức (VNĐ) <span style={{ color: 'var(--color-danger)' }}>*</span></label>
-                <input type="number" value={offerData.salary} onChange={e => setOfferData({ ...offerData, salary: e.target.value })} placeholder="VD: 9000000" step="100000" />
+                <label>
+                  Mức lương Gross chính thức (VNĐ){' '}
+                  <span style={{ color: 'var(--color-danger)' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={salaryDisplay}
+                  onChange={e => {
+                    const raw = parseCurrency(e.target.value);
+                    setSalaryDisplay(formatCurrency(raw));
+                    setOfferData({ ...offerData, salary: raw });
+                  }}
+                  onBlur={e => {
+                    const raw = parseCurrency(e.target.value);
+                    setSalaryDisplay(formatCurrency(raw));
+                  }}
+                  placeholder="VD: 9.000.000"
+                  inputMode="numeric"
+                />
               </div>
               <div className="adm-field">
                 <label>% Lương thử việc</label>
@@ -656,8 +684,10 @@ export default function ApplicationsManager({ token }) {
                   <select value={selectedApp.status} onChange={e => setSelectedApp({ ...selectedApp, status: e.target.value })}>
                     <option value="pending">Chờ xét</option>
                     <option value="interviewing">Chờ phỏng vấn</option>
+    
                     <option value="passed">Đạt</option>
                     <option value="failed">Không đạt</option>
+                    <option value="reserve">Dự phòng</option>
                   </select>
                   <ChevronDown size={14} />
                 </div>
