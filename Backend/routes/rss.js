@@ -1,17 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const NodeCache = require('node-cache');
-const rssCache = new NodeCache({ stdTTL: 300, checkperiod: 60 }); // 5 phút
+const nodeFetch = require('node-fetch'); // ← thêm
+const https = require('https');          // ← thêm
+const rssCache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
 
+const agent = new https.Agent({ rejectUnauthorized: false }); // ← thêm
 
 const FEEDS = {
-  'tat-ca':       'https://viethuongceramics.com/feed/',
-  'tin-tuc':      'https://viethuongceramics.com/tin-tuc/feed/',
-  'noi-bo':       'https://viethuongceramics.com/feed/?cat=121',  // ← sửa
-  'tin-san-pham': 'https://viethuongceramics.com/category/tin-san-pham/feed/',
+  'tat-ca':       'https://viethuongceramics.com/feed/?posts_per_rss=50',
+  'tin-tuc':      'https://viethuongceramics.com/tin-tuc/feed/?posts_per_rss=50',
+  'noi-bo':       'https://viethuongceramics.com/feed/?cat=121&posts_per_rss=50',
+  'tin-san-pham': 'https://viethuongceramics.com/category/tin-san-pham/feed/?posts_per_rss=50',
 };
 
-// Helper lấy ảnh từ HTML
 function extractImage(str = '') {
   const srcset = str.match(/srcset=["']([^"']+)["']/);
   if (srcset) {
@@ -49,20 +51,20 @@ function parseXML(xml) {
     const link = block.match(/<link>([^<]+)<\/link>/)?.[1]?.trim() ||
                  block.match(/<guid[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/guid>/)?.[1]?.trim() ||
                  getPlain('guid');
-    const title   = getCDATA('title')   || getPlain('title');
-    const date    = getPlain('pubDate');
-    const descRaw = getCDATA('description');
+    const title      = getCDATA('title') || getPlain('title');
+    const date       = getPlain('pubDate');
+    const descRaw    = getCDATA('description');
     const contentRaw = block.match(/<content:encoded><!\[CDATA\[([\s\S]*?)\]\]><\/content:encoded>/)?.[1] ?? '';
     const categories = [...block.matchAll(/<category><!\[CDATA\[([\s\S]*?)\]\]><\/category>/g)].map(m => m[1].trim());
-    const mediaSrc  = block.match(/<media:content[^>]+url=["']([^"']+)["']/)?.[1];
-    const enclosure = block.match(/<enclosure[^>]+url=["']([^"']+)["']/)?.[1];
-    const thumbnail = mediaSrc || enclosure || extractImage(contentRaw) || extractImage(descRaw) || null;
+    const mediaSrc   = block.match(/<media:content[^>]+url=["']([^"']+)["']/)?.[1];
+    const enclosure  = block.match(/<enclosure[^>]+url=["']([^"']+)["']/)?.[1];
+    const thumbnail  = mediaSrc || enclosure || extractImage(contentRaw) || extractImage(descRaw) || null;
     items.push({ title, link, date, categories, description: stripHtml(descRaw), thumbnail });
   }
   return items;
 }
 
-// ==================== ROUTE /wordpress ====================
+// ── ROUTE /wordpress ─────────────────────────────────────────
 router.get('/wordpress', async (req, res) => {
   const categoryId = req.query.category || '121';
   const count = Math.min(parseInt(req.query.count ?? '20', 10), 50);
@@ -72,25 +74,17 @@ router.get('/wordpress', async (req, res) => {
   if (cached) return res.json({ status: 'ok', count: cached.length, items: cached, cached: true });
 
   try {
-
-    const feedUrl = `https://viethuongceramics.com/category/noi-bo-su-kien/feed/`;
-const response = await fetch(feedUrl, {
-  headers: {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    'Accept-Language': 'vi-VN,vi;q=0.9,en;q=0.8',
-    'Cache-Control': 'no-cache',
-  },
-  signal: AbortSignal.timeout(8000),
-});
-
+    const feedUrl = `https://viethuongceramics.com/feed/?cat=${categoryId}`;
+    const response = await nodeFetch(feedUrl, {
+      agent,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+      },
+      timeout: 8000,
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const xml = await response.text();
-    console.log('[RSS XML length]', xml.length);
-console.log('[RSS XML đầu]', xml.substring(0, 300));
     const items = parseXML(xml).slice(0, count);
-    console.log('[RSS items count]', items.length);
-
     rssCache.set(cacheKey, items);
     res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
     res.json({ status: 'ok', count: items.length, items, cached: false });
@@ -102,7 +96,7 @@ console.log('[RSS XML đầu]', xml.substring(0, 300));
   }
 });
 
-// ==================== ROUTE / (RSS feed cũ, giữ nguyên nhưng thêm cache) ====================
+// ── ROUTE / ──────────────────────────────────────────────────
 router.get('/', async (req, res) => {
   const slug  = req.query.feed ?? 'tat-ca';
   const count = Math.min(parseInt(req.query.count ?? '20', 10), 50);
@@ -113,30 +107,26 @@ router.get('/', async (req, res) => {
 
   const cacheKey = `rss_${slug}_${count}`;
   const cached = rssCache.get(cacheKey);
-  if (cached) {
-    return res.json({ status: 'ok', feed: slug, count: cached.length, items: cached, cached: true });
-  }
+  if (cached) return res.json({ status: 'ok', feed: slug, count: cached.length, items: cached, cached: true });
 
   try {
-    const response = await fetch(feedUrl, {
-      headers: { 'User-Agent': 'VietHuongCeramics-NewsProxy/1.0' },
-      signal: AbortSignal.timeout(8000),
+    const response = await nodeFetch(feedUrl, {
+      agent,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+      },
+      timeout: 8000,
     });
     if (!response.ok) throw new Error(`Feed trả về HTTP ${response.status}`);
     const xml = await response.text();
-    console.log('[RSS XML đầu]', xml.substring(0, 500));
     const items = parseXML(xml).slice(0, count);
     rssCache.set(cacheKey, items);
     res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
     res.json({ status: 'ok', feed: slug, count: items.length, items, cached: false });
-  }    catch (err) {
-    if (!['fetch failed', 'ENOTFOUND', 'ECONNREFUSED'].some(e => err.message.includes(e))) {
-      console.error('[RSS Proxy]', err.message);
-    }
+  } catch (err) {
+    console.error('[RSS Proxy]', err.message);
     const staleCache = rssCache.get(cacheKey);
-    if (staleCache) {
-      return res.json({ status: 'ok', feed: slug, count: staleCache.length, items: staleCache, cached: true, stale: true });
-    }
+    if (staleCache) return res.json({ status: 'ok', feed: slug, count: staleCache.length, items: staleCache, cached: true, stale: true });
     res.status(502).json({ error: 'Không lấy được feed', detail: err.message });
   }
 });
