@@ -222,7 +222,7 @@ router.post('/assignments/:assignment_id/submit', candidateMiddleware, async (re
 
     let auto_score = 0;   // Điểm trắc nghiệm chấm ngay
     let max_auto = 0;   // Tổng điểm trắc nghiệm
-    let max_total = 0;   // Tổng điểm tất cả câu
+    let max_total = questions.reduce((sum, q) => sum + q.points, 0);
     let has_ai = false;
     let typing_wpm_val = typing_wpm || null;
     let typing_accuracy_val = typing_accuracy || null;
@@ -232,8 +232,7 @@ router.post('/assignments/:assignment_id/submit', candidateMiddleware, async (re
       const q = questionMap[question_id];
       if (!q) continue;
 
-      max_total += q.points;
-
+    
       let is_correct = null;
       let score = null;
 

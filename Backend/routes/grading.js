@@ -139,12 +139,12 @@ router.post('/assignments/:assignment_id/grade', async (req, res) => {
     );
 
     let total_score = 0;
-    let max_score   = 0;
+    const max_score = 100;
     const gradedAnswers = [];
 
    for (const ans of answers) {
      const points = parseInt(ans.points, 10) || 0;
-  max_score += Number(ans.points);
+  
  console.log(`Câu ${ans.question_id}: type=${ans.question_type}, score=${ans.score}, ai_graded=${ans.ai_graded}, audio_url=${ans.audio_url}`);
       // Đã chấm rồi (trắc nghiệm) — cộng điểm luôn
       if (ans.score !== null && !ans.ai_graded && ans.question_type !== 'speaking') {
