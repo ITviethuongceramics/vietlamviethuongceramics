@@ -463,6 +463,92 @@ router.get('/', authMiddleware, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+// ── THÊM ROUTE NÀY VÀO FILE BACKEND (applications.js) ────────
+// Đặt TRƯỚC route PUT /:id hiện tại để tránh conflict
+
+// Trong file applications.js, thay route PUT /:id/info bằng đoạn này:
+// Cần thêm bcrypt ở đầu file nếu chưa có:
+// const bcrypt = require('bcrypt');
+
+router.put('/:id/info', authMiddleware, upload.single('cv'), async (req, res) => {
+  const { id } = req.params;
+  const { full_name, email, phone, position, experience, address, cover_letter } = req.body;
+  const cvFile = req.file;
+
+  const errors = {};
+  if (!full_name?.trim())  errors.full_name = 'Vui lòng nhập họ tên.';
+  if (!email?.trim())      errors.email     = 'Vui lòng nhập email.';
+  if (!phone?.trim())      errors.phone     = 'Vui lòng nhập số điện thoại.';
+  if (!position?.trim())   errors.position  = 'Vui lòng nhập vị trí ứng tuyển.';
+  if (Object.keys(errors).length) {
+    if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch {} }
+    return res.status(400).json({ success: false, errors });
+  }
+
+  try {
+    const [rows] = await pool.query('SELECT cv_link, email FROM applications WHERE id = ?', [id]);
+    if (rows.length === 0) {
+      if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch {} }
+      return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ.' });
+    }
+
+    let cvLink = rows[0].cv_link;
+    const oldEmail = rows[0].email;
+    const emailChanged = email.trim().toLowerCase() !== oldEmail?.trim().toLowerCase();
+
+    if (cvFile) {
+      try {
+        cvLink = await uploadCV(cvFile.path, cvFile.originalname);
+      } catch (err) {
+        console.error('[UPLOAD CV ERROR]', err.message);
+        return res.status(500).json({ success: false, message: 'Không thể upload CV mới. Vui lòng thử lại.' });
+      } finally {
+        try { fs.unlinkSync(cvFile.path); } catch {}
+      }
+    }
+
+    await pool.query(
+      `UPDATE applications
+       SET full_name = ?, email = ?, phone = ?, position = ?,
+           experience = ?, address = ?, cover_letter = ?, cv_link = ?
+       WHERE id = ?`,
+      [
+        full_name.trim(),
+        email.trim(),
+        phone.trim(),
+        position.trim(),
+        experience?.trim()    || '',
+        address?.trim()       || '',
+        cover_letter?.trim()  || '',
+        cvLink,
+        id,
+      ]
+    );
+
+    // ── Nếu email thay đổi → cập nhật password = hash(email mới) ──
+    if (emailChanged) {
+      const bcrypt = require('bcrypt');
+      const newPassword = email.trim(); // password mới = email mới
+      const hashed = await bcrypt.hash(newPassword, 10);
+      await pool.query(
+        'UPDATE applications SET password_hash = ? WHERE id = ?',
+        [hashed, id]
+      );
+      console.log(`[PASSWORD RESET] application ${id}: password đổi theo email mới`);
+    }
+
+    res.json({
+      success: true,
+      cv_link: cvLink,
+      password_reset: emailChanged, // frontend có thể dùng để thông báo
+    });
+  } catch (err) {
+    console.error('[UPDATE INFO ERROR]', err.message);
+    if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch {} }
+    res.status(500).json({ success: false, message: 'Lỗi cập nhật hồ sơ.' });
+  }
+});
+
 
 // ── UPDATE ───────────────────────────────────────────────────
 router.put('/:id', authMiddleware, async (req, res) => {

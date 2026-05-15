@@ -741,10 +741,10 @@ router.post('/assignments/:id/reset', authMiddleware, async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    const [rows] = await conn.query(
-      'SELECT ta.id, ta.test_id FROM test_assignments WHERE id = ?',
-      [req.params.id]
-    );
+const [rows] = await conn.query(
+  'SELECT id, test_id FROM test_assignments WHERE id = ?',
+  [req.params.id]
+);
     if (!rows.length) return res.status(404).json({ message: 'Không tìm thấy assignment' });
 
     // Xóa câu trả lời + kết quả cũ
