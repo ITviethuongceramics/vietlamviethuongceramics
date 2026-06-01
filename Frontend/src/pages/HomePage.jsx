@@ -9,6 +9,7 @@ import f1 from '../assets/f1.jpg';
 import f2 from '../assets/f2.jpg';
 import f3 from '../assets/f3.jpg';
 import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 
 const API = import.meta.env.VITE_API_URL;
 const DEFAULT_SLIDES = [banner1, banner2, banner3, banner4];
@@ -76,6 +77,10 @@ export default function HomePage() {
 
   return (
     <div className="home">
+        <Helmet>
+        <title>Tuyển Dụng Việt Hương Đà Nẵng 2026 - Viet Huong Ceramics</title>
+        <meta name="description" content="Tuyển dụng tại Công ty CP Xây dựng Gốm Sứ Việt Hương Đà Nẵng 2026. Đang tuyển nhân viên kinh doanh, kế toán, hành chính. Môi trường chuyên nghiệp, phúc lợi tốt." />
+      </Helmet>
       <div className="hero">
         {!loadingImages && slides.map((img, i) => (
           <div

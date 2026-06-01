@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Eye, TrendingUp, Handshake, ShieldCheck, Lightbulb } from 'lucide-react';
 import './AboutPage.scss';
+import { Helmet } from 'react-helmet-async';
 
 const API = import.meta.env.VITE_API_URL;
 
@@ -110,7 +111,7 @@ export default function AboutPage() {
   const vision_image_url = data?.vision_image_url || 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&q=80';
   const mission_title = data?.mission_title || 'Sứ Mệnh';
   const mission_text = data?.mission_text || 'Việt Hương không ngừng sáng tạo nghiên cứu để mang lại những sản phẩm chất lượng tốt nhất trên thế giới đến với người tiêu dùng Việt Nam';
-const mission_image_url = data?.mission_image_url || 'https://viethuongceramics.com/wp-content/smush-webp/2023/11/NV-VIET-HUONG-CERAMICS-2-1920.png.webp';
+  const mission_image_url = data?.mission_image_url || 'https://viethuongceramics.com/wp-content/smush-webp/2023/11/NV-VIET-HUONG-CERAMICS-2-1920.png.webp';
 
   // Parallax
   useEffect(() => {
@@ -123,133 +124,139 @@ const mission_image_url = data?.mission_image_url || 'https://viethuongceramics.
   }, []);
 
   return (
-    <div className="about-page" ref={pageRef}>
+    <>
+      <Helmet>
+        <title>Giới Thiệu Công Ty - Viet Huong Ceramics Đà Nẵng</title>
+        <meta name="description" content="Công ty Cổ phần Xây dựng Gốm Sứ Việt Hương - Doanh nghiệp Sao Vàng Đất Việt 2024. Tiên phong trong vật liệu xây dựng, gốm sứ tại Việt Nam." />
+      </Helmet>
+      <div className="about-page" ref={pageRef}>
 
-      {/* ── HERO ── */}
-      <section className="about-hero">
-        <div className="about-hero__bg" />
-        <div className="about-hero__overlay" />
-        <div className="about-hero__content">
-          <p className="about-hero__sub" data-reveal>CÔNG TY CỔ PHẦN XÂY DỰNG GỐM SỨ VIỆT HƯƠNG</p>
-          <h1 className="about-hero__title" data-reveal>Viet Huong<br /><span>Ceramics</span></h1>
-          <p className="about-hero__tagline" data-reveal>Chất lượng – Uy tín – Phát triển bền vững</p>
-        </div>
-        <div className="about-hero__wave">
-          <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
-            <path d="M0,60 C360,120 1080,0 1440,60 L1440,120 L0,120 Z" fill="#ffffff" />
+        {/* ── HERO ── */}
+        <section className="about-hero">
+          <div className="about-hero__bg" />
+          <div className="about-hero__overlay" />
+          <div className="about-hero__content">
+            <p className="about-hero__sub" data-reveal>CÔNG TY CỔ PHẦN XÂY DỰNG GỐM SỨ VIỆT HƯƠNG</p>
+            <h1 className="about-hero__title" data-reveal>Viet Huong<br /><span>Ceramics</span></h1>
+            <p className="about-hero__tagline" data-reveal>Chất lượng – Uy tín – Phát triển bền vững</p>
+          </div>
+          <div className="about-hero__wave">
+            <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+              <path d="M0,60 C360,120 1080,0 1440,60 L1440,120 L0,120 Z" fill="#ffffff" />
+            </svg>
+          </div>
+        </section>
+
+        {/* ── STATS ── */}
+        <section className="about-stats">
+          {stats.map((s, i) => <StatCard key={i} value={s.value} label={s.label} />)}
+        </section>
+
+        {/* ── INTRO ── */}
+        <section className="about-intro">
+          <div className="about-intro__text" data-reveal>
+            <span className="section-eyebrow">{intro_eyebrow}</span>
+            <h2 className="about-intro__heading">
+              {intro_heading}<br />
+              <span>{intro_heading_span}</span>
+            </h2>
+            {intro_text1 && <p>{intro_text1}</p>}
+            {intro_text2 && <p>{intro_text2}</p>}
+            {/* intro_text3 hỗ trợ HTML */}
+            {intro_text3 && <p dangerouslySetInnerHTML={{ __html: intro_text3 }} />}
+            <div className="about-intro__pill"><span>{intro_pill}</span></div>
+          </div>
+          <div className="about-intro__image" data-reveal>
+            <div className="about-intro__image-frame">
+              <img src={intro_image_url} alt="Viet Huong Ceramics showroom" />
+              <div className="about-intro__image-accent" />
+            </div>
+            <div className="about-intro__badge">Viet Huong Ceramics</div>
+          </div>
+        </section>
+
+        <div className="wave-divider wave-divider--down">
+          <svg viewBox="0 0 1440 80" preserveAspectRatio="none">
+            <path d="M0,40 C480,80 960,0 1440,40 L1440,80 L0,80 Z" fill="#f8f4f2" />
           </svg>
         </div>
-      </section>
 
-      {/* ── STATS ── */}
-      <section className="about-stats">
-        {stats.map((s, i) => <StatCard key={i} value={s.value} label={s.label} />)}
-      </section>
-
-      {/* ── INTRO ── */}
-      <section className="about-intro">
-        <div className="about-intro__text" data-reveal>
-          <span className="section-eyebrow">{intro_eyebrow}</span>
-          <h2 className="about-intro__heading">
-            {intro_heading}<br />
-            <span>{intro_heading_span}</span>
-          </h2>
-          {intro_text1 && <p>{intro_text1}</p>}
-          {intro_text2 && <p>{intro_text2}</p>}
-          {/* intro_text3 hỗ trợ HTML */}
-          {intro_text3 && <p dangerouslySetInnerHTML={{ __html: intro_text3 }} />}
-          <div className="about-intro__pill"><span>{intro_pill}</span></div>
-        </div>
-        <div className="about-intro__image" data-reveal>
-          <div className="about-intro__image-frame">
-            <img src={intro_image_url} alt="Viet Huong Ceramics showroom" />
-            <div className="about-intro__image-accent" />
-          </div>
-          <div className="about-intro__badge">Viet Huong Ceramics</div>
-        </div>
-      </section>
-
-      <div className="wave-divider wave-divider--down">
-        <svg viewBox="0 0 1440 80" preserveAspectRatio="none">
-          <path d="M0,40 C480,80 960,0 1440,40 L1440,80 L0,80 Z" fill="#f8f4f2" />
-        </svg>
-      </div>
-
-      {/* ── TẦM NHÌN – SỨ MỆNH ── */}
-      <section className="about-vision">
-        <div className="about-vision__image" data-reveal>
-          <div className="about-vision__image-wrapper">
-            <img src={vision_image_url} alt="Đội ngũ Việt Hương" /> {/* ← dynamic */}
-            <div className="about-vision__badge">Tầm Nhìn · Sứ Mệnh</div>
-          </div>
-        </div>
-        <div className="about-vision__content" data-reveal>
-          <div className="about-vision__block">
-            <span className="section-eyebrow">Vision</span>
-            <h2 className="about-vision__label">{vision_title}</h2>
-            <ul>
-              {vision_points.map((point, i) => (
-                <li key={i}>{point}</li>
-              ))}
-            </ul>
-          </div>
-          <div className="about-vision__block about-vision__block--mission">
-            <span className="section-eyebrow section-eyebrow--right">Mission</span>
-            <h2 className="about-vision__label about-vision__label--right">{mission_title}</h2>
-            <p>{mission_text}</p>
-            <div className="about-vision__mission-image">
-              <img src={mission_image_url} alt="Sứ mệnh Việt Hương" />
-              <div className="about-vision__mission-image-overlay" />
+        {/* ── TẦM NHÌN – SỨ MỆNH ── */}
+        <section className="about-vision">
+          <div className="about-vision__image" data-reveal>
+            <div className="about-vision__image-wrapper">
+              <img src={vision_image_url} alt="Đội ngũ Việt Hương" /> {/* ← dynamic */}
+              <div className="about-vision__badge">Tầm Nhìn · Sứ Mệnh</div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <div className="wave-divider wave-divider--up">
-        <svg viewBox="0 0 1440 80" preserveAspectRatio="none">
-          <path d="M0,40 C480,0 960,80 1440,40 L1440,0 L0,0 Z" fill="#f8f4f2" />
-        </svg>
-      </div>
-
-      {/* ── GIÁ TRỊ CỐT LÕI ── */}
-      <section className="about-values">
-        <div className="about-values__bg-overlay" />
-        <div className="about-values__inner">
-          <div className="about-values__header" data-reveal>
-            <div className="about-values__title-bar" />
-            <h2 className="about-values__title">GIÁ<br />TRỊ<br />CỐT<br />LÕI</h2>
-          </div>
-          <div className="about-values__grid">
-            <div className="about-values__row">
-              {coreValues.slice(0, 3).map((v, i) => (
-                <div className="about-values__card" data-reveal key={i} style={{ '--delay': `${i * 0.12}s` }}>
-                  <div className="about-values__icon">{v.icon}</div>
-                  <h3>{v.title}</h3>
-                  <p>{v.desc}</p>
-                  <div className="about-values__card-line" />
-                </div>
-              ))}
+          <div className="about-vision__content" data-reveal>
+            <div className="about-vision__block">
+              <span className="section-eyebrow">Vision</span>
+              <h2 className="about-vision__label">{vision_title}</h2>
+              <ul>
+                {vision_points.map((point, i) => (
+                  <li key={i}>{point}</li>
+                ))}
+              </ul>
             </div>
-            <div className="about-values__row about-values__row--center">
-              {coreValues.slice(3).map((v, i) => (
-                <div className="about-values__card" data-reveal key={i} style={{ '--delay': `${(i + 3) * 0.12}s` }}>
-                  <div className="about-values__icon">{v.icon}</div>
-                  <h3>{v.title}</h3>
-                  <p>{v.desc}</p>
-                  <div className="about-values__card-line" />
-                </div>
-              ))}
+            <div className="about-vision__block about-vision__block--mission">
+              <span className="section-eyebrow section-eyebrow--right">Mission</span>
+              <h2 className="about-vision__label about-vision__label--right">{mission_title}</h2>
+              <p>{mission_text}</p>
+              <div className="about-vision__mission-image">
+                <img src={mission_image_url} alt="Sứ mệnh Việt Hương" />
+                <div className="about-vision__mission-image-overlay" />
+              </div>
             </div>
           </div>
+        </section>
+
+        <div className="wave-divider wave-divider--up">
+          <svg viewBox="0 0 1440 80" preserveAspectRatio="none">
+            <path d="M0,40 C480,0 960,80 1440,40 L1440,0 L0,0 Z" fill="#f8f4f2" />
+          </svg>
         </div>
-      </section>
 
-      <div className="wave-divider wave-divider--bottom">
-        <svg viewBox="0 0 1440 80" preserveAspectRatio="none">
-          <path d="M0,0 C360,80 1080,0 1440,60 L1440,80 L0,80 Z" fill="#ffffff" />
-        </svg>
+        {/* ── GIÁ TRỊ CỐT LÕI ── */}
+        <section className="about-values">
+          <div className="about-values__bg-overlay" />
+          <div className="about-values__inner">
+            <div className="about-values__header" data-reveal>
+              <div className="about-values__title-bar" />
+              <h2 className="about-values__title">GIÁ<br />TRỊ<br />CỐT<br />LÕI</h2>
+            </div>
+            <div className="about-values__grid">
+              <div className="about-values__row">
+                {coreValues.slice(0, 3).map((v, i) => (
+                  <div className="about-values__card" data-reveal key={i} style={{ '--delay': `${i * 0.12}s` }}>
+                    <div className="about-values__icon">{v.icon}</div>
+                    <h3>{v.title}</h3>
+                    <p>{v.desc}</p>
+                    <div className="about-values__card-line" />
+                  </div>
+                ))}
+              </div>
+              <div className="about-values__row about-values__row--center">
+                {coreValues.slice(3).map((v, i) => (
+                  <div className="about-values__card" data-reveal key={i} style={{ '--delay': `${(i + 3) * 0.12}s` }}>
+                    <div className="about-values__icon">{v.icon}</div>
+                    <h3>{v.title}</h3>
+                    <p>{v.desc}</p>
+                    <div className="about-values__card-line" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div className="wave-divider wave-divider--bottom">
+          <svg viewBox="0 0 1440 80" preserveAspectRatio="none">
+            <path d="M0,0 C360,80 1080,0 1440,60 L1440,80 L0,80 Z" fill="#ffffff" />
+          </svg>
+        </div>
+
       </div>
-
-    </div>
+    </>
   );
 }

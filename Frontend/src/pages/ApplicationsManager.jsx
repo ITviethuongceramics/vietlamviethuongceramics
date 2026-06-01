@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import {
   Search, ChevronDown, X, FileText, Phone, Mail, Briefcase,
- Clock, MapPin, Eye, CheckCircle, XCircle, AlertCircle,
-ChevronLeft, ChevronRight, Save, Plus, User, Loader, Send, Trash2, Calendar, Bookmark
+  Clock, MapPin, Eye, CheckCircle, XCircle, AlertCircle,
+  ChevronLeft, ChevronRight, Save, Plus, User, Loader, Send, Trash2, Calendar, Bookmark, Edit2, UploadCloud
 } from 'lucide-react';
 import './toast.scss';
 import { createPortal } from 'react-dom';
@@ -12,9 +12,13 @@ const APPS_PER_PAGE = 10;
 export default function ApplicationsManager({ token }) {
   const [applications, setApplications] = useState([]);
   const [selectedApp, setSelectedApp] = useState(null);
+  const [editMode, setEditMode] = useState(false);         
+  const [editData, setEditData] = useState({});                
+  const [editCvFile, setEditCvFile] = useState(null);          
   const [showAddModal, setShowAddModal] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [appPage, setAppPage] = useState(1);
+  const [startDateParts, setStartDateParts] = useState({ day: '', month: '', year: '', time: '' });
   const [appFilter, setAppFilter] = useState({
     status: '', search: '', department: '', experience: '', location: '', dateRange: ''
   });
@@ -26,10 +30,8 @@ export default function ApplicationsManager({ token }) {
     if (!value && value !== 0) return '';
     return Number(value).toLocaleString('vi-VN');
   };
+  const parseCurrency = (str) => str.replace(/\./g, '').replace(/[^0-9]/g, '');
 
-  const parseCurrency = (str) => {
-    return str.replace(/\./g, '').replace(/[^0-9]/g, '');
-  };
   const [offerData, setOfferData] = useState({
     position: '',
     start_date: '',
@@ -43,21 +45,18 @@ export default function ApplicationsManager({ token }) {
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [saving, setSaving] = useState(false);                   // ← NEW: for edit save
   const [sending, setSending] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState({ message: '', type: '', visible: false });
   const [confirmModal, setConfirmModal] = useState({ visible: false, message: '', onConfirm: null });
-  const [salaryDisplay, setSalaryDisplay] = useState(
-    formatCurrency(offerData.salary)
-  );
+  const [salaryDisplay, setSalaryDisplay] = useState(formatCurrency(offerData.salary));
+
   const showToast = (message, type = 'success') => {
     setToast({ message, type, visible: true });
     setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 3000);
   };
-
-  const showConfirm = (message, onConfirm) => {
-    setConfirmModal({ visible: true, message, onConfirm });
-  };
+  const showConfirm = (message, onConfirm) => setConfirmModal({ visible: true, message, onConfirm });
   const hideConfirm = () => setConfirmModal({ visible: false, message: '', onConfirm: null });
 
   useEffect(() => { fetchApplications(); }, []);
@@ -68,11 +67,7 @@ export default function ApplicationsManager({ token }) {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/applications`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (!res.ok) {
-        setApplications([]);
-        showToast('Không thể tải danh sách hồ sơ', 'error');
-        return;
-      }
+      if (!res.ok) { setApplications([]); showToast('Không thể tải danh sách hồ sơ', 'error'); return; }
       const data = await res.json();
       setApplications(Array.isArray(data) ? data : []);
       setAppPage(1);
@@ -103,7 +98,17 @@ export default function ApplicationsManager({ token }) {
       }
     });
   }
-
+  function updateStartDate(parts) {
+    const next = { ...startDateParts, ...parts };
+    setStartDateParts(next);
+    const { day, month, year, time } = next;
+    if (day && month && year) {
+      const d = String(day).padStart(2, '0');
+      const m = String(month).padStart(2, '0');
+      const t = time || '08:00';
+      setOfferData(prev => ({ ...prev, start_date: `${year}-${m}-${d}T${t}` }));
+    }
+  }
   async function addApplication() {
     if (!newApp.full_name || !newApp.email || !newApp.phone || !newApp.position) {
       showToast('Vui lòng điền đầy đủ các trường bắt buộc (*)', 'error');
@@ -121,7 +126,6 @@ export default function ApplicationsManager({ token }) {
       formData.append('cover_letter', newApp.cover_letter || '');
       if (newApp.cvFile) formData.append('cv', newApp.cvFile);
 
-      // Đóng modal + toast ngay, không chờ email
       setShowAddModal(false);
       setNewApp({ full_name: '', email: '', phone: '', position: '', experience: '', address: '', cover_letter: '', cvFile: null });
       showToast('Thêm hồ sơ thành công!', 'success');
@@ -132,19 +136,91 @@ export default function ApplicationsManager({ token }) {
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       }).catch(err => console.error('[ADD ERROR]', err.message));
-
     } finally {
       setAdding(false);
     }
   }
 
+  // ── NEW: Enter edit mode ─────────────────────────────────────
+  function enterEditModeFor(app) {
+    setEditData({
+      full_name: app.full_name || '',
+      email: app.email || '',
+      phone: app.phone || '',
+      position: app.position || '',
+      experience: app.experience || '',
+      address: app.address || '',
+      cover_letter: app.cover_letter || '',
+    });
+    setEditCvFile(null);
+    setEditMode(true);
+  }
+
+  function enterEditMode() {
+    enterEditModeFor(selectedApp);
+  }
+
+  function cancelEdit() {
+    setEditMode(false);
+    setEditCvFile(null);
+    setEditData({});
+  }
+
+  // ── NEW: Save edited info (PUT with multipart) ───────────────
+  async function saveEditedInfo() {
+    if (!editData.full_name || !editData.email || !editData.phone || !editData.position) {
+      showToast('Vui lòng điền đầy đủ các trường bắt buộc (*)', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append('full_name', editData.full_name);
+      formData.append('email', editData.email);
+      formData.append('phone', editData.phone);
+      formData.append('position', editData.position);
+      formData.append('experience', editData.experience || '');
+      formData.append('address', editData.address || '');
+      formData.append('cover_letter', editData.cover_letter || '');
+      // Status & note preserved from selectedApp
+      formData.append('status', selectedApp.status);
+      formData.append('note', selectedApp.note || '');
+      if (editCvFile) formData.append('cv', editCvFile);
+
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/applications/${selectedApp.id}/info`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Cập nhật thất bại');
+      }
+      const updated = await res.json();
+      // Sync selectedApp with latest data
+      setSelectedApp(prev => ({
+        ...prev,
+        ...editData,
+        cv_link: updated.cv_link ?? prev.cv_link,
+      }));
+      showToast('Cập nhật thông tin thành công', 'success');
+      setEditMode(false);
+      setEditCvFile(null);
+      fetchApplications();
+    } catch (err) {
+      showToast(err.message || 'Lỗi khi cập nhật thông tin', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function updateApplication(id, status, note) {
     if (status === 'passed') {
+      setStartDateParts({ day: '', month: '', year: '', time: '' }); // ← thêm dòng này
       setOfferData(prev => ({ ...prev, position: selectedApp.position || '', start_date: '', salary: '' }));
       setShowOfferModal(true);
       return;
     }
-
     if (status === 'failed') {
       const appToReject = selectedApp;
       setSelectedApp(null);
@@ -155,7 +231,6 @@ export default function ApplicationsManager({ token }) {
       });
       return;
     }
-
     await doUpdate(id, status, note);
   }
 
@@ -234,13 +309,12 @@ export default function ApplicationsManager({ token }) {
     }
   }
 
-  // ── Status config — 1 chỗ duy nhất để thêm/sửa trạng thái ──
   const STATUS_MAP = {
     pending: { label: 'Chờ xét', cls: 'adm-badge--pending', Icon: AlertCircle },
     interviewing: { label: 'Chờ phỏng vấn', cls: 'adm-badge--interviewing', Icon: Calendar },
     passed: { label: 'Đạt', cls: 'adm-badge--passed', Icon: CheckCircle },
     failed: { label: 'Không đạt', cls: 'adm-badge--failed', Icon: XCircle },
-    reserve:{ label: 'Dự phòng',      cls: 'adm-badge--reserve',      Icon: Bookmark },
+    reserve: { label: 'Dự phòng', cls: 'adm-badge--reserve', Icon: Bookmark },
   };
   const appStatusInfo = (status) => STATUS_MAP[status] || { label: status, cls: '', Icon: AlertCircle };
 
@@ -302,9 +376,7 @@ export default function ApplicationsManager({ token }) {
   return (
     <>
       {toast.visible && createPortal(
-        <div className={`adm-toast adm-toast--${toast.type}`}>
-          <span>{toast.message}</span>
-        </div>,
+        <div className={`adm-toast adm-toast--${toast.type}`}><span>{toast.message}</span></div>,
         document.body
       )}
 
@@ -317,17 +389,11 @@ export default function ApplicationsManager({ token }) {
               <button className="adm-icon-btn" onClick={hideConfirm}><X size={18} /></button>
             </div>
             <div className="adm-modal__body">
-              <p style={{ fontSize: 15, color: 'var(--color-text)', margin: 0, lineHeight: 1.6 }}>
-                {confirmModal.message}
-              </p>
+              <p style={{ fontSize: 15, color: 'var(--color-text)', margin: 0, lineHeight: 1.6 }}>{confirmModal.message}</p>
             </div>
             <div className="adm-modal__footer">
-              <button className="adm-btn adm-btn--ghost" onClick={hideConfirm}>
-                <X size={15} /> Hủy
-              </button>
-              <button className="adm-btn adm-btn--primary" onClick={confirmModal.onConfirm}>
-                <CheckCircle size={15} /> Xác nhận
-              </button>
+              <button className="adm-btn adm-btn--ghost" onClick={hideConfirm}><X size={15} /> Hủy</button>
+              <button className="adm-btn adm-btn--primary" onClick={confirmModal.onConfirm}><CheckCircle size={15} /> Xác nhận</button>
             </div>
           </div>
         </div>
@@ -397,12 +463,13 @@ export default function ApplicationsManager({ token }) {
       </div>
 
       {/* TABLE */}
-      <div className="adm-table-wrap">
-        <table className="adm-table">
+      <div className="adm-table-wrap" style={{ overflowX: 'auto' }}>
+        <table className="adm-table" style={{ minWidth: 900 }}>
           <thead>
             <tr>
               <th>Họ tên</th><th>Email</th><th>Số điện thoại</th>
-              <th>Vị trí</th><th>Trạng thái</th><th>CV</th><th>Thao tác</th>
+              <th>Vị trí</th><th>Trạng thái</th><th style={{ minWidth: 90, whiteSpace: 'nowrap' }}>CV</th>
+              <th style={{ minWidth: 120, whiteSpace: 'nowrap' }}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -421,23 +488,23 @@ export default function ApplicationsManager({ token }) {
                   <td><span className="adm-meta"><Phone size={12} />{app.phone}</span></td>
                   <td>{app.position}</td>
                   <td><span className={`adm-badge ${s.cls}`}><s.Icon size={11} /> {s.label}</span></td>
-                  <td>
+                  <td style={{ whiteSpace: 'nowrap', minWidth: 90 }}>
                     {app.cv_link
-                      ? <a href={app.cv_link} target="_blank" rel="noreferrer" className="adm-link"><FileText size={13} /> Xem CV</a>
+                      ? <a href={app.cv_link} target="_blank" rel="noreferrer" className="adm-link" style={{ whiteSpace: 'nowrap' }}><FileText size={13} /> Xem CV</a>
                       : <span className="adm-muted">Không có</span>}
                   </td>
-                  <td style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <button className="adm-icon-btn adm-icon-btn--blue" onClick={() => setSelectedApp(app)} title="Chi tiết">
-                      <Eye size={14} />
-                    </button>
-                    <button
-                      className="adm-icon-btn adm-icon-btn--red"
-                      onClick={() => deleteApplication(app.id)}
-                      title="Xóa"
-                      disabled={deleting}
-                    >
-                      {deleting ? <span className="adm-spinner" style={{ width: 14, height: 14 }} /> : <Trash2 size={14} />}
-                    </button>
+                  <td style={{ whiteSpace: 'nowrap', minWidth: 120 }}>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <button className="adm-icon-btn adm-icon-btn--blue" onClick={() => { setSelectedApp(app); setEditMode(false); }} title="Chi tiết">
+                        <Eye size={14} />
+                      </button>
+                      <button className="adm-icon-btn adm-icon-btn--orange" onClick={() => { setSelectedApp(app); enterEditModeFor(app); }} title="Chỉnh sửa">
+                        <Edit2 size={14} />
+                      </button>
+                      <button className="adm-icon-btn adm-icon-btn--red" onClick={() => deleteApplication(app.id)} title="Xóa" disabled={deleting}>
+                        {deleting ? <span className="adm-spinner" style={{ width: 14, height: 14 }} /> : <Trash2 size={14} />}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -484,10 +551,7 @@ export default function ApplicationsManager({ token }) {
                 <div className="adm-select-wrap">
                   <select value={newApp.experience} onChange={e => setNewApp({ ...newApp, experience: e.target.value })}>
                     <option value="">Chọn kinh nghiệm</option>
-                    <option>Không yêu cầu</option>
-                    <option>Dưới 1 năm</option>
-                    <option>1-2 năm</option>
-                    <option>3+ năm</option>
+                    <option>Không yêu cầu</option><option>Dưới 1 năm</option><option>1-2 năm</option><option>3+ năm</option>
                   </select>
                   <ChevronDown size={14} />
                 </div>
@@ -498,11 +562,7 @@ export default function ApplicationsManager({ token }) {
               </div>
               <div className="adm-field">
                 <label>CV / Hồ sơ</label>
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  onChange={e => setNewApp({ ...newApp, cvFile: e.target.files[0] || null })}
-                />
+                <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={e => setNewApp({ ...newApp, cvFile: e.target.files[0] || null })} />
                 {newApp.cvFile && (
                   <span style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 4, display: 'block' }}>
                     📎 {newApp.cvFile.name} ({(newApp.cvFile.size / 1024).toFixed(0)} KB)
@@ -515,9 +575,7 @@ export default function ApplicationsManager({ token }) {
               </div>
             </div>
             <div className="adm-modal__footer">
-              <button className="adm-btn adm-btn--ghost" onClick={() => setShowAddModal(false)} disabled={adding}>
-                <X size={15} /> Hủy
-              </button>
+              <button className="adm-btn adm-btn--ghost" onClick={() => setShowAddModal(false)} disabled={adding}><X size={15} /> Hủy</button>
               <button className="adm-btn adm-btn--primary" onClick={addApplication}
                 disabled={!newApp.full_name || !newApp.email || !newApp.phone || !newApp.position || adding}>
                 {adding ? <><span className="adm-spinner" /> Đang thêm...</> : <><Plus size={15} /> Thêm hồ sơ</>}
@@ -545,56 +603,34 @@ export default function ApplicationsManager({ token }) {
               </div>
               <div className="adm-field">
                 <label>Thời gian nhận việc <span style={{ color: 'var(--color-danger)' }}>*</span></label>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <input
-                    type="number" placeholder="Ngày" min="1" max="31"
-                    style={{ width: 70 }}
-                    value={offerData.start_date ? new Date(offerData.start_date).getDate() : ''}
-                    onChange={e => {
-                      const d = new Date(offerData.start_date || new Date());
-                      d.setDate(Number(e.target.value));
-                      setOfferData({ ...offerData, start_date: d.toISOString().slice(0, 16) });
-                    }}
+                    type="number" placeholder="Ngày" min="1" max="31" style={{ width: 70 }}
+                    value={startDateParts.day}
+                    onChange={e => updateStartDate({ day: e.target.value })}
                   />
-                  <span style={{ alignSelf: 'center' }}>/</span>
+                  <span>/</span>
                   <input
-                    type="number" placeholder="Tháng" min="1" max="12"
-                    style={{ width: 80 }}
-                    value={offerData.start_date ? new Date(offerData.start_date).getMonth() + 1 : ''}
-                    onChange={e => {
-                      const d = new Date(offerData.start_date || new Date());
-                      d.setMonth(Number(e.target.value) - 1);
-                      setOfferData({ ...offerData, start_date: d.toISOString().slice(0, 16) });
-                    }}
+                    type="number" placeholder="Tháng" min="1" max="12" style={{ width: 80 }}
+                    value={startDateParts.month}
+                    onChange={e => updateStartDate({ month: e.target.value })}
                   />
-                  <span style={{ alignSelf: 'center' }}>/</span>
+                  <span>/</span>
                   <input
-                    type="number" placeholder="Năm" min="2024" max="2030"
-                    style={{ width: 90 }}
-                    value={offerData.start_date ? new Date(offerData.start_date).getFullYear() : ''}
-                    onChange={e => {
-                      const d = new Date(offerData.start_date || new Date());
-                      d.setFullYear(Number(e.target.value));
-                      setOfferData({ ...offerData, start_date: d.toISOString().slice(0, 16) });
-                    }}
+                    type="number" placeholder="Năm" min="2024" max="2030" style={{ width: 90 }}
+                    value={startDateParts.year}
+                    onChange={e => updateStartDate({ year: e.target.value })}
                   />
-                  <span style={{ alignSelf: 'center' }}>lúc</span>
+                  <span>lúc</span>
                   <input
-                    type="time"
-                    style={{ width: 125 }}
-                    value={offerData.start_date ? offerData.start_date.slice(11, 16) : ''}
-                    onChange={e => {
-                      const base = offerData.start_date || new Date().toISOString().slice(0, 10);
-                      setOfferData({ ...offerData, start_date: base.slice(0, 10) + 'T' + e.target.value });
-                    }}
+                    type="time" style={{ width: 125 }}
+                    value={startDateParts.time}
+                    onChange={e => updateStartDate({ time: e.target.value })}
                   />
                 </div>
                 {offerData.start_date && (
                   <span style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 4, display: 'block' }}>
-                    {new Date(offerData.start_date).toLocaleString('vi-VN', {
-                      day: '2-digit', month: '2-digit', year: 'numeric',
-                      hour: '2-digit', minute: '2-digit'
-                    })}
+                    {new Date(offerData.start_date).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </span>
                 )}
               </div>
@@ -607,25 +643,11 @@ export default function ApplicationsManager({ token }) {
                 <input type="number" value={offerData.probation_period} onChange={e => setOfferData({ ...offerData, probation_period: e.target.value })} min="0" max="12" />
               </div>
               <div className="adm-field">
-                <label>
-                  Mức lương Gross chính thức (VNĐ){' '}
-                  <span style={{ color: 'var(--color-danger)' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={salaryDisplay}
-                  onChange={e => {
-                    const raw = parseCurrency(e.target.value);
-                    setSalaryDisplay(formatCurrency(raw));
-                    setOfferData({ ...offerData, salary: raw });
-                  }}
-                  onBlur={e => {
-                    const raw = parseCurrency(e.target.value);
-                    setSalaryDisplay(formatCurrency(raw));
-                  }}
-                  placeholder="VD: 9.000.000"
-                  inputMode="numeric"
-                />
+                <label>Mức lương Gross chính thức (VNĐ) <span style={{ color: 'var(--color-danger)' }}>*</span></label>
+                <input type="text" value={salaryDisplay}
+                  onChange={e => { const raw = parseCurrency(e.target.value); setSalaryDisplay(formatCurrency(raw)); setOfferData({ ...offerData, salary: raw }); }}
+                  onBlur={e => { const raw = parseCurrency(e.target.value); setSalaryDisplay(formatCurrency(raw)); }}
+                  placeholder="VD: 9.000.000" inputMode="numeric" />
               </div>
               <div className="adm-field">
                 <label>% Lương thử việc</label>
@@ -637,9 +659,7 @@ export default function ApplicationsManager({ token }) {
               </div>
             </div>
             <div className="adm-modal__footer">
-              <button className="adm-btn adm-btn--ghost" onClick={() => setShowOfferModal(false)} disabled={sending}>
-                <X size={15} /> Hủy
-              </button>
+              <button className="adm-btn adm-btn--ghost" onClick={() => setShowOfferModal(false)} disabled={sending}><X size={15} /> Hủy</button>
               <button className="adm-btn adm-btn--primary" onClick={sendOfferLetter}
                 disabled={!offerData.start_date || !offerData.salary || sending}>
                 {sending ? <><span className="adm-spinner" /> Đang gửi...</> : <><Send size={15} /> Gửi thư mời</>}
@@ -649,68 +669,175 @@ export default function ApplicationsManager({ token }) {
         </div>
       )}
 
+      {/* ── DETAIL / EDIT MODAL ─────────────────────────────────── */}
       {selectedApp && !showOfferModal && (
-        <div className="adm-modal-backdrop" onClick={() => setSelectedApp(null)}>
+        <div className="adm-modal-backdrop" onClick={() => { setSelectedApp(null); setEditMode(false); }}>
           <div className="adm-modal" onClick={e => e.stopPropagation()}>
             <div className="adm-modal__header">
-              <h2>Thông tin ứng viên</h2>
-              <button className="adm-icon-btn" onClick={() => setSelectedApp(null)}><X size={18} /></button>
+              <h2>{editMode ? <><Edit2 size={18} /> Chỉnh sửa thông tin</> : 'Thông tin ứng viên'}</h2>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {/* Toggle Edit / View */}
+                {!editMode && (
+                  <button className="adm-btn adm-btn--ghost adm-btn--sm" onClick={enterEditMode} title="Chỉnh sửa thông tin">
+                    <Edit2 size={14} /> Chỉnh sửa
+                  </button>
+                )}
+                <button className="adm-icon-btn" onClick={() => { setSelectedApp(null); setEditMode(false); }}><X size={18} /></button>
+              </div>
             </div>
-            <div className="adm-modal__body">
-              <div className="adm-modal__info-grid">
-                {[
-                  ['Họ tên', selectedApp.full_name, null],
-                  ['Email', selectedApp.email, <Mail size={13} />],
-                  ['Số điện thoại', selectedApp.phone, <Phone size={13} />],
-                  ['Vị trí', selectedApp.position, <Briefcase size={13} />],
-                  ['Kinh nghiệm', selectedApp.experience, <Clock size={13} />],
-                  ['Địa chỉ', selectedApp.address, <MapPin size={13} />],
-                ].map(([label, value, icon]) => (
-                  <div className="adm-modal__info-row" key={label}>
-                    <span className="adm-modal__info-label">{label}</span>
-                    <span className="adm-modal__info-value">{icon && icon} {value || '—'}</span>
-                  </div>
-                ))}
-              </div>
-              {selectedApp.cv_link && (
-                <a href={selectedApp.cv_link} target="_blank" rel="noreferrer"
-                  className="adm-btn adm-btn--blue adm-btn--sm" style={{ display: 'inline-flex', marginBottom: 20 }}>
-                  <FileText size={14} /> Xem CV
-                </a>
-              )}
-              <div className="adm-field">
-                <label>Trạng thái</label>
-                <div className="adm-select-wrap">
-                  <select value={selectedApp.status} onChange={e => setSelectedApp({ ...selectedApp, status: e.target.value })}>
-                    <option value="pending">Chờ xét</option>
-                    <option value="interviewing">Chờ phỏng vấn</option>
-    
-                    <option value="passed">Đạt</option>
-                    <option value="failed">Không đạt</option>
-                    <option value="reserve">Dự phòng</option>
-                  </select>
-                  <ChevronDown size={14} />
-                </div>
-              </div>
 
-              <div className="adm-field">
-                <label>Ghi chú</label>
-                <textarea rows={4} value={selectedApp.note || ''} onChange={e => setSelectedApp({ ...selectedApp, note: e.target.value })} placeholder="Nhập ghi chú..." />
-              </div>
+            <div className="adm-modal__body">
+              {editMode ? (
+                /* ── EDIT FORM ─────────────────────────────── */
+                <>
+                  <div className="adm-field">
+                    <label>Họ và tên <span style={{ color: 'var(--color-danger)' }}>*</span></label>
+                    <input type="text" value={editData.full_name} onChange={e => setEditData({ ...editData, full_name: e.target.value })} />
+                  </div>
+                  <div className="adm-field">
+                    <label>Email <span style={{ color: 'var(--color-danger)' }}>*</span></label>
+                    <input type="email" value={editData.email} onChange={e => setEditData({ ...editData, email: e.target.value })} />
+                  </div>
+                  <div className="adm-field">
+                    <label>Số điện thoại <span style={{ color: 'var(--color-danger)' }}>*</span></label>
+                    <input type="tel" value={editData.phone} onChange={e => setEditData({ ...editData, phone: e.target.value })} />
+                  </div>
+                  <div className="adm-field">
+                    <label>Vị trí ứng tuyển <span style={{ color: 'var(--color-danger)' }}>*</span></label>
+                    <input type="text" value={editData.position} onChange={e => setEditData({ ...editData, position: e.target.value })} />
+                  </div>
+                  <div className="adm-field">
+                    <label>Kinh nghiệm</label>
+                    <div className="adm-select-wrap">
+                      <select value={editData.experience} onChange={e => setEditData({ ...editData, experience: e.target.value })}>
+                        <option value="">Chọn kinh nghiệm</option>
+                        <option>Không yêu cầu</option><option>Dưới 1 năm</option><option>1-2 năm</option><option>3+ năm</option>
+                      </select>
+                      <ChevronDown size={14} />
+                    </div>
+                  </div>
+                  <div className="adm-field">
+                    <label>Địa chỉ</label>
+                    <input type="text" value={editData.address} onChange={e => setEditData({ ...editData, address: e.target.value })} />
+                  </div>
+
+                  {/* CV upload in edit mode */}
+                  <div className="adm-field">
+                    <label>CV / Hồ sơ</label>
+                    {selectedApp.cv_link && !editCvFile && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <a href={selectedApp.cv_link} target="_blank" rel="noreferrer" className="adm-link" style={{ fontSize: 13 }}>
+                          <FileText size={13} /> CV hiện tại
+                        </a>
+                        <span style={{ fontSize: 12, color: 'var(--color-muted)' }}>(upload mới sẽ thay thế)</span>
+                      </div>
+                    )}
+                    <label
+                      htmlFor="edit-cv-upload"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+                        border: '1.5px dashed var(--color-border)', borderRadius: 7, padding: '10px 14px',
+                        fontSize: 13, color: 'var(--color-muted)', background: 'var(--color-surface)',
+                        transition: 'border-color 0.2s',
+                      }}
+                    >
+                      <UploadCloud size={16} />
+                      {editCvFile ? `📎 ${editCvFile.name} (${(editCvFile.size / 1024).toFixed(0)} KB)` : 'Chọn CV mới (PDF, Word, ảnh — tối đa 10MB)'}
+                    </label>
+                    <input
+                      id="edit-cv-upload"
+                      type="file"
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      style={{ display: 'none' }}
+                      onChange={e => setEditCvFile(e.target.files[0] || null)}
+                    />
+                    {editCvFile && (
+                      <button
+                        className="adm-btn adm-btn--ghost adm-btn--sm"
+                        style={{ marginTop: 6 }}
+                        onClick={() => setEditCvFile(null)}
+                      >
+                        <X size={12} /> Bỏ chọn
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="adm-field">
+                    <label>Thư xin việc</label>
+                    <textarea rows={4} value={editData.cover_letter} onChange={e => setEditData({ ...editData, cover_letter: e.target.value })} placeholder="Thư xin việc..." />
+                  </div>
+                </>
+              ) : (
+                /* ── VIEW MODE ─────────────────────────────── */
+                <>
+                  <div className="adm-modal__info-grid">
+                    {[
+                      ['Họ tên', selectedApp.full_name, null],
+                      ['Email', selectedApp.email, <Mail size={13} />],
+                      ['Số điện thoại', selectedApp.phone, <Phone size={13} />],
+                      ['Vị trí', selectedApp.position, <Briefcase size={13} />],
+                      ['Kinh nghiệm', selectedApp.experience, <Clock size={13} />],
+                      ['Địa chỉ', selectedApp.address, <MapPin size={13} />],
+                    ].map(([label, value, icon]) => (
+                      <div className="adm-modal__info-row" key={label}>
+                        <span className="adm-modal__info-label">{label}</span>
+                        <span className="adm-modal__info-value">{icon && icon} {value || '—'}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {selectedApp.cv_link && (
+                    <a href={selectedApp.cv_link} target="_blank" rel="noreferrer"
+                      className="adm-btn adm-btn--blue adm-btn--sm" style={{ display: 'inline-flex', marginBottom: 20 }}>
+                      <FileText size={14} /> Xem CV
+                    </a>
+                  )}
+                  <div className="adm-field">
+                    <label>Trạng thái</label>
+                    <div className="adm-select-wrap">
+                      <select value={selectedApp.status} onChange={e => setSelectedApp({ ...selectedApp, status: e.target.value })}>
+                        <option value="pending">Chờ xét</option>
+                        <option value="interviewing">Chờ phỏng vấn</option>
+                        <option value="passed">Đạt</option>
+                        <option value="failed">Không đạt</option>
+                        <option value="reserve">Dự phòng</option>
+                      </select>
+                      <ChevronDown size={14} />
+                    </div>
+                  </div>
+                  <div className="adm-field">
+                    <label>Ghi chú</label>
+                    <textarea rows={4} value={selectedApp.note || ''} onChange={e => setSelectedApp({ ...selectedApp, note: e.target.value })} placeholder="Nhập ghi chú..." />
+                  </div>
+                </>
+              )}
             </div>
+
             <div className="adm-modal__footer">
-              <button className="adm-btn adm-btn--ghost" onClick={() => setSelectedApp(null)} disabled={updating}>
-                <X size={15} /> Đóng
-              </button>
-              <button className="adm-btn adm-btn--primary"
-                onClick={() => updateApplication(selectedApp.id, selectedApp.status, selectedApp.note)}
-                disabled={updating}>
-                {updating ? <><span className="adm-spinner" /> Đang lưu...</> : <><Save size={15} /> Lưu</>}
-              </button>
+              {editMode ? (
+                <>
+                  <button className="adm-btn adm-btn--ghost" onClick={cancelEdit} disabled={saving}>
+                    <X size={15} /> Hủy
+                  </button>
+                  <button className="adm-btn adm-btn--primary" onClick={saveEditedInfo} disabled={saving}>
+                    {saving ? <><span className="adm-spinner" /> Đang lưu...</> : <><Save size={15} /> Lưu thông tin</>}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button className="adm-btn adm-btn--ghost" onClick={() => setSelectedApp(null)} disabled={updating}>
+                    <X size={15} /> Đóng
+                  </button>
+                  <button className="adm-btn adm-btn--primary"
+                    onClick={() => updateApplication(selectedApp.id, selectedApp.status, selectedApp.note)}
+                    disabled={updating}>
+                    {updating ? <><span className="adm-spinner" /> Đang lưu...</> : <><Save size={15} /> Lưu trạng thái</>}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
       )}
     </>
   );
-}   
+}

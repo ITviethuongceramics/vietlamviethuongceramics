@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { MapPin, Mail, Phone, Building2, ChevronRight } from 'lucide-react';
 import './ContactPage.scss';
-
+import { Helmet } from 'react-helmet-async';
 const STATIC_BRANCHES = [
   {
     id: 'dn',
@@ -39,12 +39,12 @@ const VN_GEOJSON_URL =
   'https://raw.githubusercontent.com/wmgeolab/geoBoundaries/main/releaseData/gbOpen/VNM/ADM0/geoBoundaries-VNM-ADM0.geojson';
 
 export default function ContactPage() {
-  const mapRef     = useRef(null);
+  const mapRef = useRef(null);
   const leafletMap = useRef(null);
   const markersRef = useRef([]);
-  const heroRef    = useRef(null);
+  const heroRef = useRef(null);
 
-  const [active, setActive]     = useState('dn');
+  const [active, setActive] = useState('dn');
   const [branches, setBranches] = useState(STATIC_BRANCHES); // hiện hình ngay từ đầu
 
   // ── Fetch branches từ API, fallback về static nếu lỗi ────────
@@ -218,90 +218,96 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="cp">
+    <>
+      <Helmet>
+        <title>Liên Hệ - Chi Nhánh Việt Hương Tại Đà Nẵng, Hải Phòng, HCM</title>
+        <meta name="description" content="Liên hệ Công ty Gốm Sứ Việt Hương. Chi nhánh tại Đà Nẵng: 246 Nguyễn Hữu Thọ. Hotline: 0905.386.888." />
+      </Helmet>
+      <div className="cp">
 
-      {/* ── HERO ── */}
-      <div className="cp-hero" ref={heroRef}>
-        <div className="cp-hero__bg" />
-        <div className="cp-hero__overlay" />
-        <div className="cp-hero__inner">
-          <p className="cp-hero__eyebrow">Công ty cổ phần xây dựng gốm sứ Việt Hương</p>
-          <h1 className="cp-hero__title">
-            <em>Tìm</em> Chi nhánh<br /><em>Gần</em> Bạn Nhất
-          </h1>
-          <p className="cp-hero__sub">
-            Chi nhánh vật liệu xây dựng tại các thành phố lớn trên khắp Việt Nam
-          </p>
-        </div>
-        <div className="cp-hero__wave">
-          <svg viewBox="0 0 1440 60" preserveAspectRatio="none">
-            <path d="M0,30 C480,60 960,0 1440,30 L1440,60 L0,60 Z" fill="#f7f4f2" />
-          </svg>
-        </div>
-      </div>
-
-      {/* ── BODY ── */}
-      <div className="cp-body">
-
-        {/* ── SIDEBAR ── */}
-        <div className="cp-sidebar">
-          <div className="cp-cards">
-            {branches.map((b, i) => (
-              <div
-                key={b.id}
-                className={`cp-card ${active === b.id ? 'cp-card--active' : ''}`}
-                onClick={() => handleCardClick(b, i)}
-              >
-                <div className="cp-card__thumb">
-                  <img src={b.image_url} alt={b.name} />
-                  <div className="cp-card__thumb-overlay" />
-                  <span className="cp-card__thumb-index">{String(i + 1).padStart(2, '0')}</span>
-                </div>
-
-                <div className="cp-card__content">
-                  <h3 className="cp-card__name">{b.name}</h3>
-                  <div className="cp-card__row">
-                    <MapPin size={13} className="cp-card__icon" />
-                    <span>{b.address}</span>
-                  </div>
-                  <div className="cp-card__row">
-                    <Mail size={13} className="cp-card__icon" />
-                    <span>{b.email}</span>
-                  </div>
-                  <div className="cp-card__row">
-                    <Phone size={13} className="cp-card__icon" />
-                    <span>{b.phone}</span>
-                  </div>
-                  <div className="cp-card__footer">
-                    <span className="cp-card__cta">
-                      Xem trên bản đồ <ChevronRight size={13} />
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
+        {/* ── HERO ── */}
+        <div className="cp-hero" ref={heroRef}>
+          <div className="cp-hero__bg" />
+          <div className="cp-hero__overlay" />
+          <div className="cp-hero__inner">
+            <p className="cp-hero__eyebrow">Công ty cổ phần xây dựng gốm sứ Việt Hương</p>
+            <h1 className="cp-hero__title">
+              <em>Tìm</em> Chi nhánh<br /><em>Gần</em> Bạn Nhất
+            </h1>
+            <p className="cp-hero__sub">
+              Chi nhánh vật liệu xây dựng tại các thành phố lớn trên khắp Việt Nam
+            </p>
           </div>
+          <div className="cp-hero__wave">
+            <svg viewBox="0 0 1440 60" preserveAspectRatio="none">
+              <path d="M0,30 C480,60 960,0 1440,30 L1440,60 L0,60 Z" fill="#f7f4f2" />
+            </svg>
+          </div>
+        </div>
 
-          <div className="cp-contact-box">
-            <Building2 size={16} className="cp-contact-box__icon" />
-            <div>
-              <p className="cp-contact-box__label">Nhà máy VLXD Việt Hương</p>
-              <p className="cp-contact-box__value">Cụm KCN Tây An, Xã Duy Xuyên, TP. Đà Nẵng</p>
+        {/* ── BODY ── */}
+        <div className="cp-body">
+
+          {/* ── SIDEBAR ── */}
+          <div className="cp-sidebar">
+            <div className="cp-cards">
+              {branches.map((b, i) => (
+                <div
+                  key={b.id}
+                  className={`cp-card ${active === b.id ? 'cp-card--active' : ''}`}
+                  onClick={() => handleCardClick(b, i)}
+                >
+                  <div className="cp-card__thumb">
+                    <img src={b.image_url} alt={b.name} />
+                    <div className="cp-card__thumb-overlay" />
+                    <span className="cp-card__thumb-index">{String(i + 1).padStart(2, '0')}</span>
+                  </div>
+
+                  <div className="cp-card__content">
+                    <h3 className="cp-card__name">{b.name}</h3>
+                    <div className="cp-card__row">
+                      <MapPin size={13} className="cp-card__icon" />
+                      <span>{b.address}</span>
+                    </div>
+                    <div className="cp-card__row">
+                      <Mail size={13} className="cp-card__icon" />
+                      <span>{b.email}</span>
+                    </div>
+                    <div className="cp-card__row">
+                      <Phone size={13} className="cp-card__icon" />
+                      <span>{b.phone}</span>
+                    </div>
+                    <div className="cp-card__footer">
+                      <span className="cp-card__cta">
+                        Xem trên bản đồ <ChevronRight size={13} />
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="cp-contact-box">
+              <Building2 size={16} className="cp-contact-box__icon" />
+              <div>
+                <p className="cp-contact-box__label">Nhà máy VLXD Việt Hương</p>
+                <p className="cp-contact-box__value">Cụm KCN Tây An, Xã Duy Xuyên, TP. Đà Nẵng</p>
+              </div>
+            </div>
+
+            <div className="cp-1">
+              <span className="cp-1__value">
+                Thêm nhiều chi nhánh khác trên khắp cả nước++
+              </span>
             </div>
           </div>
 
-          <div className="cp-1">
-            <span className="cp-1__value">
-              Thêm nhiều chi nhánh khác trên khắp cả nước++
-            </span>
+          {/* ── MAP ── */}
+          <div className="cp-map-wrap">
+            <div ref={mapRef} className="cp-map" />
           </div>
         </div>
-
-        {/* ── MAP ── */}
-        <div className="cp-map-wrap">
-          <div ref={mapRef} className="cp-map" />
-        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -10,7 +10,7 @@ const headers = () => ({
 });
 
 const MAX_VIOLATIONS = 2;
-const TAB_OUT_TIMEOUT_MS = 5000;
+const TAB_OUT_TIMEOUT_MS = 30000;
 
 // ──────────────────────────────────────────────────────────────
 // Shuffle helpers
@@ -427,23 +427,21 @@ export function CandidateTestListPage() {
 
   useEffect(() => {
     if (!localStorage.getItem('candidate_token')) { navigate('/candidate'); return; }
-    fetch(`${API}/api/candidate/assignments`, { headers: headers() })
-      .then(r => r.json())
-      .then(d => {
-        setAssignments(Array.isArray(d) ? d : []);
-        setLoading(false);
-        const serverLocked = (Array.isArray(d) ? d : [])
-          .filter(a => a.is_locked).map(a => String(a.assignment_id));
-        if (serverLocked.length > 0) {
-          const merged = [...new Set([
-            ...JSON.parse(localStorage.getItem('locked_assignments') || '[]'),
-            ...serverLocked
-          ])];
-          localStorage.setItem('locked_assignments', JSON.stringify(merged));
-          setLockedIds(merged);
-        }
-      })
-      .catch(() => setLoading(false));
+fetch(`${API}/api/candidate/assignments`, { headers: headers() })
+  .then(r => r.json())
+  .then(d => {
+    setAssignments(Array.isArray(d) ? d : []);
+    setLoading(false);
+
+    // Sync locked_assignments theo server (không chỉ thêm mà còn xóa)
+    const serverLocked = (Array.isArray(d) ? d : [])
+      .filter(a => a.is_locked)
+      .map(a => String(a.assignment_id));
+
+    localStorage.setItem('locked_assignments', JSON.stringify(serverLocked));
+    setLockedIds(serverLocked);
+  })
+  .catch(() => setLoading(false));
   }, []);
 
   const statusLabel = {
@@ -506,7 +504,7 @@ export function CandidateTestListPage() {
                   {a.status === 'graded' && a.percentage != null && (
                     <div className={`ct-result-bar ${a.passed ? 'pass' : 'fail'}`}>
                       <span className="ct-result-pct">{a.percentage}%</span>
-                      <span>{a.passed ? '✓ Đạt yêu cầu' : '✗ Chưa đạt'}</span>
+                      <span>{a.passed ? '✓ Đạt yêu cầu' : ' Chưa đạt'}</span>
                     </div>
                   )}
                   {a.status === 'submitted' && (
@@ -554,14 +552,6 @@ export default function CandidateTestPage() {
   const isRequestingMic = useRef(false);
   const isSubmittingRef = useRef(false);
 
-  useEffect(() => {
-    const locked = JSON.parse(localStorage.getItem('locked_assignments') || '[]');
-    if (locked.includes(String(assignment_id))) {
-      setError('Bài thi này đã bị khóa do vi phạm quy định. Vui lòng liên hệ HR.');
-      setLoading(false);
-    }
-  }, [assignment_id]);
-
   const handleSubmit = useCallback(async () => {
     if (submitting) return;
     setSubmitting(true);
@@ -602,8 +592,7 @@ export default function CandidateTestPage() {
 
   useEffect(() => {
     if (!localStorage.getItem('candidate_token')) { navigate('/candidate'); return; }
-    const locked = JSON.parse(localStorage.getItem('locked_assignments') || '[]');
-    if (locked.includes(String(assignment_id))) return;
+
 
     fetch(`${API}/api/candidate/assignments/${assignment_id}/start`, { headers: headers() })
       .then(r => r.json())
@@ -815,7 +804,7 @@ export function CandidateResultPage() {
         <div className="ct-result-detail">
           <span>{result.total_score}/{result.max_score} điểm</span>
           <span className={`ct-pass-badge ${result.passed ? 'pass' : 'fail'}`}>
-            {result.passed ? '✓ Đạt yêu cầu' : '✗ Chưa đạt'}
+            {result.passed ? '✓ Đạt yêu cầu' : 'Chưa đạt'}
           </span>
         </div>
         {result.violations > 0 && (

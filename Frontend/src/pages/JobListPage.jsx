@@ -7,7 +7,7 @@ import {
   ChevronLeft, ChevronRight
 } from 'lucide-react';
 import './JobListPage.scss';
-
+import { Helmet } from 'react-helmet-async';
 const DEPARTMENTS = [
   'Kinh doanh', 'Marketing', 'Kế toán - Tài chính',
   'Nhân sự', 'Kỹ thuật - Sản xuất', 'Logistics',
@@ -91,222 +91,228 @@ export default function JobListPage() {
   };
 
   return (
-    <div className="jlp">
+    <>
+      <Helmet>
+        <title>Tuyển Dụng Việt Hương 2026 - {jobs.length} Vị Trí Đang Tuyển | Đà Nẵng</title>
+        <meta name="description" content="Xem tất cả vị trí tuyển dụng tại Công ty Gốm Sứ Việt Hương 2026. Kinh doanh, kế toán, hành chính tại Đà Nẵng, Hải Phòng, HCM." />
+      </Helmet>
+      <div className="jlp">
 
-      {/* HERO */}
-      <div className="jlp-hero">
-        <div className="jlp-hero__overlay" />
-        <div className="jlp-hero__content">
-          <p className="jlp-hero__eyebrow">CÔNG TY CỔ PHẦN XÂY DỰNG GỐM SỨ VIỆT HƯƠNG</p>
-          <h1 className="jlp-hero__title">Cơ Hội Việc Làm</h1>
-          <p className="jlp-hero__sub">Khám phá các vị trí tuyển dụng và cùng chúng tôi xây dựng tương lai</p>
-        </div>
-        <div className="jlp-hero__wave">
-          <svg viewBox="0 0 1440 80" preserveAspectRatio="none">
-            <path d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80 Z" fill="#fff" />
-          </svg>
-        </div>
-      </div>
-
-      {/* SEARCH BAR */}
-      <div className="jlp-searchbar">
-        <div className="jlp-searchbar__inner">
-          <div className="jlp-searchbar__input-wrap">
-            <Search size={18} />
-            <input
-              placeholder="Nhập từ khóa..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && fetchJobs()}
-            />
+        {/* HERO */}
+        <div className="jlp-hero">
+          <div className="jlp-hero__overlay" />
+          <div className="jlp-hero__content">
+            <p className="jlp-hero__eyebrow">CÔNG TY CỔ PHẦN XÂY DỰNG GỐM SỨ VIỆT HƯƠNG</p>
+            <h1 className="jlp-hero__title">Cơ Hội Việc Làm</h1>
+            <p className="jlp-hero__sub">Khám phá các vị trí tuyển dụng và cùng chúng tôi xây dựng tương lai</p>
           </div>
-          <button className="jlp-sidebar__search" onClick={fetchJobs}>
-            Tìm kiếm
-          </button>
+          <div className="jlp-hero__wave">
+            <svg viewBox="0 0 1440 80" preserveAspectRatio="none">
+              <path d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80 Z" fill="#fff" />
+            </svg>
+          </div>
         </div>
-      </div>
 
-      {/* LAYOUT */}
-      <div className="jlp-layout">
-
-        {/* SIDEBAR */}
-        <aside className={`jlp-sidebar ${sidebarOpen ? 'jlp-sidebar--open' : ''}`}>
-
-          <button className="jlp-sidebar__apply" onClick={fetchJobs}>
-            Áp dụng bộ lọc
-          </button>
-
-          {/* Phòng ban */}
-          <div className="jlp-sidebar__section">
-            <h5>Phòng ban</h5>
-            <div className="jlp-sidebar__dept-search">
+        {/* SEARCH BAR */}
+        <div className="jlp-searchbar">
+          <div className="jlp-searchbar__inner">
+            <div className="jlp-searchbar__input-wrap">
+              <Search size={18} />
               <input
-                placeholder="Lọc phòng ban..."
-                value={deptSearch}
-                onChange={e => setDeptSearch(e.target.value)}
+                placeholder="Nhập từ khóa..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && fetchJobs()}
               />
-              <Search size={14} />
             </div>
-            <label className="jlp-sidebar__check">
-              <input
-                type="checkbox"
-                checked={department === ''}
-                onChange={() => setDepartment('')}
-              />
-              <span>Tất cả</span>
-            </label>
-            {filteredDepts.map(d => (
-              <label key={d} className="jlp-sidebar__check">
+            <button className="jlp-sidebar__search" onClick={fetchJobs}>
+              Tìm kiếm
+            </button>
+          </div>
+        </div>
+
+        {/* LAYOUT */}
+        <div className="jlp-layout">
+
+          {/* SIDEBAR */}
+          <aside className={`jlp-sidebar ${sidebarOpen ? 'jlp-sidebar--open' : ''}`}>
+
+            <button className="jlp-sidebar__apply" onClick={fetchJobs}>
+              Áp dụng bộ lọc
+            </button>
+
+            {/* Phòng ban */}
+            <div className="jlp-sidebar__section">
+              <h5>Phòng ban</h5>
+              <div className="jlp-sidebar__dept-search">
+                <input
+                  placeholder="Lọc phòng ban..."
+                  value={deptSearch}
+                  onChange={e => setDeptSearch(e.target.value)}
+                />
+                <Search size={14} />
+              </div>
+              <label className="jlp-sidebar__check">
                 <input
                   type="checkbox"
-                  checked={department === d}
-                  onChange={() => setDepartment(prev => prev === d ? '' : d)}
+                  checked={department === ''}
+                  onChange={() => setDepartment('')}
                 />
-                <span>{d}</span>
+                <span>Tất cả</span>
               </label>
-            ))}
-          </div>
-
-          {/* Địa điểm */}
-          <div className="jlp-sidebar__section">
-            <h5>Địa điểm</h5>
-            {['Tất cả', 'Đà Nẵng', 'Hải Phòng', 'Hồ Chí Minh'].map(loc => (
-              <label key={loc} className="jlp-sidebar__check">
-                <input
-                  type="radio"
-                  name="location"
-                  checked={location === (loc === 'Tất cả' ? '' : loc)}
-                  onChange={() => setLocation(loc === 'Tất cả' ? '' : loc)}
-                />
-                <span>{loc}</span>
-              </label>
-            ))}
-          </div>
-
-          {/* Loại công việc */}
-          <div className="jlp-sidebar__section">
-            <h5>Loại công việc</h5>
-            {['Tất cả', 'Toàn thời gian', 'Bán thời gian', 'Thực tập'].map(t => (
-              <label key={t} className="jlp-sidebar__check">
-                <input
-                  type="radio"
-                  name="type"
-                  checked={type === (t === 'Tất cả' ? '' : t)}
-                  onChange={() => setType(t === 'Tất cả' ? '' : t)}
-                />
-                <span>{t}</span>
-              </label>
-            ))}
-          </div>
-
-        </aside>
-
-        {/* MAIN */}
-        <main className="jlp-main">
-
-          <button className="jlp-filter-toggle" onClick={() => setSidebarOpen(o => !o)}>
-            <SlidersHorizontal size={16} /> Bộ lọc
-          </button>
-
-          {!loading && (
-            <p className="jlp-count">
-              Tìm thấy <strong>{jobs.length}</strong> vị trí tuyển dụng
-              {department && <span className="jlp-count__tag">{department}<button onClick={() => setDepartment('')}>✕</button></span>}
-              {location && <span className="jlp-count__tag">{location}<button onClick={() => setLocation('')}>✕</button></span>}
-              {type && <span className="jlp-count__tag">{type}<button onClick={() => setType('')}>✕</button></span>}
-            </p>
-          )}
-
-          {loading ? (
-            <div className="jlp-loading">
-              <div className="jlp-loading__spinner" />
-              <p>Đang tải danh sách việc làm...</p>
+              {filteredDepts.map(d => (
+                <label key={d} className="jlp-sidebar__check">
+                  <input
+                    type="checkbox"
+                    checked={department === d}
+                    onChange={() => setDepartment(prev => prev === d ? '' : d)}
+                  />
+                  <span>{d}</span>
+                </label>
+              ))}
             </div>
-          ) : jobs.length === 0 ? (
-            <div className="jlp-empty">
-              <AlertCircle size={48} />
-              <p>Không tìm thấy việc làm phù hợp</p>
+
+            {/* Địa điểm */}
+            <div className="jlp-sidebar__section">
+              <h5>Địa điểm</h5>
+              {['Tất cả', 'Đà Nẵng', 'Hải Phòng', 'Hồ Chí Minh'].map(loc => (
+                <label key={loc} className="jlp-sidebar__check">
+                  <input
+                    type="radio"
+                    name="location"
+                    checked={location === (loc === 'Tất cả' ? '' : loc)}
+                    onChange={() => setLocation(loc === 'Tất cả' ? '' : loc)}
+                  />
+                  <span>{loc}</span>
+                </label>
+              ))}
             </div>
-          ) : (
-            <>
-              <div className="jlp-list">
-                {paginatedJobs.map((job) => {
-                  const left = days(job);
-                  const urgent = left !== null && left <= 7;
-                  return (
-                    <div className={`jlp-row ${urgent ? 'jlp-row--urgent' : ''}`} key={job.id}>
-                      <div className="jlp-row__main">
-                        <div className="jlp-row__title-wrap">
-                          <Link to={`/tuyen-dung/${job.id}`} className="jlp-row__title">
-                            {job.title}
-                          </Link>
-                          {job.hot && <span className="jlp-badge jlp-badge--hot">HOT</span>}
-                          {urgent && <span className="jlp-badge jlp-badge--urgent">Sắp hết hạn</span>}
-                        </div>
-                        <div className="jlp-row__meta">
-                          <span><DollarSign size={13} /> Lương: <strong>{job.salary || 'Thương lượng'}</strong></span>
-                          {job.location && <span><MapPin size={13} /> {job.location}</span>}
-                          {job.type && <span><Briefcase size={13} /> {job.type}</span>}
-                          {job.department && <span><Briefcase size={13} /> {job.department}</span>}
-                        </div>
-                        {job.deadline && (
-                          <div className="jlp-row__deadline">
-                            <Calendar size={12} />
-                            Hạn nộp: <strong>{new Date(job.deadline).toLocaleDateString('vi-VN')}</strong>
-                            {left !== null && (
-                              <span className={`jlp-row__days ${urgent ? 'urgent' : ''}`}>
-                                · Còn {left} ngày
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <div className="jlp-row__action">
-                        <Link to={`/tuyen-dung/${job.id}`} className="jlp-row__btn">
-                          Ứng tuyển ngay
-                        </Link>
-                      </div>
-                    </div>
-                  );
-                })}
+
+            {/* Loại công việc */}
+            <div className="jlp-sidebar__section">
+              <h5>Loại công việc</h5>
+              {['Tất cả', 'Toàn thời gian', 'Bán thời gian', 'Thực tập'].map(t => (
+                <label key={t} className="jlp-sidebar__check">
+                  <input
+                    type="radio"
+                    name="type"
+                    checked={type === (t === 'Tất cả' ? '' : t)}
+                    onChange={() => setType(t === 'Tất cả' ? '' : t)}
+                  />
+                  <span>{t}</span>
+                </label>
+              ))}
+            </div>
+
+          </aside>
+
+          {/* MAIN */}
+          <main className="jlp-main">
+
+            <button className="jlp-filter-toggle" onClick={() => setSidebarOpen(o => !o)}>
+              <SlidersHorizontal size={16} /> Bộ lọc
+            </button>
+
+            {!loading && (
+              <p className="jlp-count">
+                Tìm thấy <strong>{jobs.length}</strong> vị trí tuyển dụng
+                {department && <span className="jlp-count__tag">{department}<button onClick={() => setDepartment('')}>✕</button></span>}
+                {location && <span className="jlp-count__tag">{location}<button onClick={() => setLocation('')}>✕</button></span>}
+                {type && <span className="jlp-count__tag">{type}<button onClick={() => setType('')}>✕</button></span>}
+              </p>
+            )}
+
+            {loading ? (
+              <div className="jlp-loading">
+                <div className="jlp-loading__spinner" />
+                <p>Đang tải danh sách việc làm...</p>
               </div>
+            ) : jobs.length === 0 ? (
+              <div className="jlp-empty">
+                <AlertCircle size={48} />
+                <p>Không tìm thấy việc làm phù hợp</p>
+              </div>
+            ) : (
+              <>
+                <div className="jlp-list">
+                  {paginatedJobs.map((job) => {
+                    const left = days(job);
+                    const urgent = left !== null && left <= 7;
+                    return (
+                      <div className={`jlp-row ${urgent ? 'jlp-row--urgent' : ''}`} key={job.id}>
+                        <div className="jlp-row__main">
+                          <div className="jlp-row__title-wrap">
+                            <Link to={`/tuyen-dung/${job.id}`} className="jlp-row__title">
+                              {job.title}
+                            </Link>
+                            {job.hot && <span className="jlp-badge jlp-badge--hot">HOT</span>}
+                            {urgent && <span className="jlp-badge jlp-badge--urgent">Sắp hết hạn</span>}
+                          </div>
+                          <div className="jlp-row__meta">
+                            <span><DollarSign size={13} /> Lương: <strong>{job.salary || 'Thương lượng'}</strong></span>
+                            {job.location && <span><MapPin size={13} /> {job.location}</span>}
+                            {job.type && <span><Briefcase size={13} /> {job.type}</span>}
+                            {job.department && <span><Briefcase size={13} /> {job.department}</span>}
+                          </div>
+                          {job.deadline && (
+                            <div className="jlp-row__deadline">
+                              <Calendar size={12} />
+                              Hạn nộp: <strong>{new Date(job.deadline).toLocaleDateString('vi-VN')}</strong>
+                              {left !== null && (
+                                <span className={`jlp-row__days ${urgent ? 'urgent' : ''}`}>
+                                  · Còn {left} ngày
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="jlp-row__action">
+                          <Link to={`/tuyen-dung/${job.id}`} className="jlp-row__btn">
+                            Ứng tuyển ngay
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
 
-              {/* PAGINATION */}
-              {totalPages > 1 && (
-                <div className="jlp-pagination">
-                  <button
-                    className="jlp-pagination__btn jlp-pagination__btn--nav"
-                    onClick={() => goToPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft size={16} />
-                  </button>
+                {/* PAGINATION */}
+                {totalPages > 1 && (
+                  <div className="jlp-pagination">
+                    <button
+                      className="jlp-pagination__btn jlp-pagination__btn--nav"
+                      onClick={() => goToPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
 
-                  {getPageNumbers().map((page, idx) =>
-                    page === '...'
-                      ? <span key={`ellipsis-${idx}`} className="jlp-pagination__ellipsis">...</span>
-                      : <button
+                    {getPageNumbers().map((page, idx) =>
+                      page === '...'
+                        ? <span key={`ellipsis-${idx}`} className="jlp-pagination__ellipsis">...</span>
+                        : <button
                           key={page}
                           className={`jlp-pagination__btn ${currentPage === page ? 'jlp-pagination__btn--active' : ''}`}
                           onClick={() => goToPage(page)}
                         >
                           {page}
                         </button>
-                  )}
+                    )}
 
-                  <button
-                    className="jlp-pagination__btn jlp-pagination__btn--nav"
-                    onClick={() => goToPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                  >
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </main>
+                    <button
+                      className="jlp-pagination__btn jlp-pagination__btn--nav"
+                      onClick={() => goToPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </main>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

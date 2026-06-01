@@ -63,7 +63,7 @@ export default function TestsManager() {
 
   const [filterStatus, setFilterStatus] = useState('');
   const [searchApp, setSearchApp]       = useState('');
-
+const [searchTest, setSearchTest] = useState('');
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
@@ -157,7 +157,9 @@ export default function TestsManager() {
     if (r.ok) { showToast(d.message); fetchAssignments(); }
     else showToast(d.message, 'error');
   };
-
+const filteredTests = tests.filter(t =>
+  !searchTest || t.title?.toLowerCase().includes(searchTest.toLowerCase())
+);
   const filteredAssignments = assignments.filter(a =>
     !searchApp ||
     a.full_name?.toLowerCase().includes(searchApp.toLowerCase()) ||
@@ -186,12 +188,24 @@ export default function TestsManager() {
       </div>
 
       {/* ── Tab: Bộ đề ── */}
-      {tab === 'tests' && (
-        <div className="tm-section">
-          {loading ? <div className="tm-loading">Đang tải...</div> : (
-            <div className="tm-grid">
-              {tests.length === 0 && <div className="tm-empty">Chưa có bộ đề nào. Tạo bộ đề đầu tiên!</div>}
-              {tests.map(t => (
+{tab === 'tests' && (
+  <div className="tm-section">
+    <div className="tm-toolbar">
+      <input
+        className="tm-search"
+        placeholder="Tìm theo tên bộ đề..."
+        value={searchTest}
+        onChange={e => setSearchTest(e.target.value)}
+      />
+    </div>
+    {loading ? <div className="tm-loading">Đang tải...</div> : (
+      <div className="tm-grid">
+        {filteredTests.length === 0 && (
+          <div className="tm-empty">
+            {searchTest ? `Không tìm thấy bộ đề nào khớp với "${searchTest}"` : 'Chưa có bộ đề nào. Tạo bộ đề đầu tiên!'}
+          </div>
+        )}
+        {filteredTests.map(t => (
                 <div key={t.id} className={`tm-card ${!t.is_active ? 'tm-card--inactive' : ''}`}>
                   <div className="tm-card__info">
                     <div className="tm-card__titlerow">
@@ -887,7 +901,7 @@ function exportResultToPDF(data) {
           <span style="color:#6b7280;font-weight:600;">Trả lời: </span>
           ${a.answer || '<em style="color:#9ca3af">Không trả lời</em>'}
         </div>`}
-        ${a.correct_answer && !a.options ? `<div style="font-size:13px;color:#16a34a;margin-bottom:6px;padding-left:4px;"><span style="font-weight:600;">✓ Đáp án đúng: </span>${a.correct_answer}</div>` : ''}
+        ${a.correct_answer && !a.options ? `<div style="font-size:13px;color:#16a34a;margin-bottom:6px;padding-left:4px;"><span style="font-weight:600;"> Đáp án đúng: </span>${a.correct_answer}</div>` : ''}
         ${a.ai_feedback ? `<div style="margin-top:8px;padding:10px 14px;background:#eff6ff;border-left:3px solid #3b82f6;border-radius:0 6px 6px 0;font-size:12px;color:#1e40af;line-height:1.6;"><span style="font-weight:700;">🤖 AI nhận xét: </span>${a.ai_feedback}</div>` : ''}
       </div>`;
   }).join('');

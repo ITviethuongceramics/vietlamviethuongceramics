@@ -72,8 +72,10 @@ function AppContent() {
 
 export default function App() {
   return (
+    <HelmetProvider>
     <BrowserRouter>
       <AppContent />
     </BrowserRouter>
+    </HelmetProvider>
   );
 }

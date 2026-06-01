@@ -202,7 +202,7 @@ export default function ImagesManager() {
         <div className="text-actions">
           <button className="btn-reset" onClick={handleResetContent}>Đặt lại mặc định</button>
           <button className={`btn-save ${saved ? 'btn-save--saved' : ''}`} onClick={handleSaveContent}>
-            {saved ? '✓ Đã lưu!' : 'Lưu nội dung'}
+            {saved ? ' Đã lưu!' : 'Lưu nội dung'}
           </button>
         </div>
       </div>

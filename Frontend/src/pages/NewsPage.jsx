@@ -5,7 +5,12 @@ import './NewsPage.scss';
 const API_BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:5000').replace(/\/api$/, '');
 
 const FEEDS = [
-  { label: 'Nội bộ & Sự kiện', slug: 'noi-bo', categoryId: 121 },
+  {
+    label: 'Nội bộ & Sự kiện',
+    slug: 'noi-bo',
+    categoryId: 121,
+    rssUrl: 'https://viethuongceramics.com/feed/?cat=121',
+  },
 ];
 
 const ITEMS_PER_PAGE = 10;
@@ -17,7 +22,7 @@ function formatDate(dateStr) {
 }
 
 
-function useReveal(dep) { 
+function useReveal(dep) {
   const ref = useRef(null);
   useEffect(() => {
     if (!dep) return;
@@ -67,7 +72,7 @@ export default function NewsPage() {
     setError(false);
     try {
       const feed = FEEDS.find(f => f.slug === slug);
-const res = await fetch(`${API_BASE}/api/rss/wordpress?category=${feed.categoryId}&count=50`);
+      const res = await fetch(`${API_BASE}/api/rss?feed=${slug}&count=50`); // ← sửa
       const data = await res.json();
       if (data.status === 'ok') {
         setCache(prev => ({ ...prev, [slug]: data.items }));
@@ -180,6 +185,7 @@ const res = await fetch(`${API_BASE}/api/rss/wordpress?category=${feed.categoryI
           <>
             {featured && (
               <a key={`featured-${currentPage}`}
+                href={featured.link}
                 target="_blank"
                 rel="noreferrer"
                 className="news-featured"
@@ -196,9 +202,9 @@ const res = await fetch(`${API_BASE}/api/rss/wordpress?category=${feed.categoryI
                 </div>
                 <div className="news-featured__content">
                   <div className="news-featured__meta">
-                  {(featured.categories || []).slice(0, 2).map((c, i) => (
-  <span className="news-cat" key={i}><Tag size={10} />{c}</span>
-))}
+                    {(featured.categories || []).slice(0, 2).map((c, i) => (
+                      <span className="news-cat" key={i}><Tag size={10} />{c}</span>
+                    ))}
                     <span className="news-date"><Calendar size={12} />{formatDate(featured.date)}</span>
                   </div>
                   <h2 className="news-featured__title">{featured.title}</h2>
