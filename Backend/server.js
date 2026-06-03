@@ -57,6 +57,52 @@ app.use('/api/images',   imagesRoutes);
 app.use('/api/tests', express.json(), testsRouter);
 app.use('/api/candidate', express.json(), require('./routes/candidate'));
 app.use('/api/grading', gradingRouter);
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const [jobs] = await pool.query(
+      'SELECT id, created_at FROM jobs WHERE status = "active" OR status IS NULL'
+    );
+
+    const staticUrls = [
+      { loc: '/',           priority: '1.0', changefreq: 'weekly'  },
+      { loc: '/tuyen-dung', priority: '0.9', changefreq: 'daily'   },
+      { loc: '/gioi-thieu', priority: '0.8', changefreq: 'monthly' },
+      { loc: '/lien-he',    priority: '0.7', changefreq: 'monthly' },
+    ];
+
+    const base = 'https://vieclam.viethuongceramics.com';
+    const today = new Date().toISOString().split('T')[0];
+
+    const staticXml = staticUrls.map(u => `
+  <url>
+    <loc>${base}${u.loc}</loc>
+    <lastmod>${today}</lastmod>
+    <priority>${u.priority}</priority>
+    <changefreq>${u.changefreq}</changefreq>
+  </url>`).join('');
+
+    const jobXml = jobs.map(job => `
+  <url>
+    <loc>${base}/tuyen-dung/${job.id}</loc>
+    <lastmod>${job.created_at
+      ? new Date(job.created_at).toISOString().split('T')[0]
+      : today}</lastmod>
+    <priority>0.8</priority>
+    <changefreq>weekly</changefreq>
+  </url>`).join('');
+
+    res.header('Content-Type', 'application/xml; charset=utf-8');
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${staticXml}
+${jobXml}
+</urlset>`);
+
+  } catch (err) {
+    console.error('Sitemap error:', err);
+    res.status(500).send('Sitemap generation failed');
+  }
+});
 app.get('/', (req, res) => res.send('Việt Hương Ceramics API đang chạy'));
 
 app.use((err, req, res, next) => {

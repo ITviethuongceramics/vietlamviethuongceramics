@@ -82,12 +82,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// ── POST /api/auth/candidate/login ──────────────────────────
-/**
- * Ứng viên đăng nhập bằng email.
- * Mật khẩu mặc định = email (plain text lần đầu, sau đó hash).
- * Hệ thống tự hash + lưu lại khi lần đầu đăng nhập.
- */
+
 router.post('/candidate/login', async (req, res) => {
   try {
     const { email, password } = req.body;

@@ -85,8 +85,8 @@ async function appendToSheet(record) {
   }
 }
 
-// ─── Ghi offer letter vào Trang tính2 ───────────────────────────────────────
-async function appendOfferToSheet({ fullName, email, offerPosition, startDate, salary, probationSalaryPercent, probationSalary }) {
+// Thêm probationPeriod vào destructure
+async function appendOfferToSheet({ fullName, email, offerPosition, startDate, salary, probationSalaryPercent, probationSalary, probationPeriod }) {
   try {
     const client = await auth.getClient();                        // ✅ resolve auth
     const sheets = google.sheets({ version: 'v4', auth: client });
@@ -104,6 +104,7 @@ async function appendOfferToSheet({ fullName, email, offerPosition, startDate, s
           startDate,
           formatMoney(salary),
           `${probationSalaryPercent}% = ${formatMoney(probationSalary)}`,
+          `${probationPeriod} tháng`, 
           new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
         ]],
       },

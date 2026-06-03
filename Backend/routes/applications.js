@@ -24,15 +24,10 @@ function authMiddleware(req, res, next) {
 }
 
 
-// Xóa:
-// const nodemailer = require('nodemailer');
-// const transporter = nodemailer.createTransport({...});
-
-// ── EMAIL (Brevo HTTP API) ────────────────────────────────────
 async function sendEmail({ to, subject, html, fromName = 'VIET HUONG CERAMICS - Phòng Nhân Sự', attachments = [] }) {
   const body = {
-    sender:      { name: fromName, email: process.env.BREVO_FROM },
-    to:          [{ email: to }],
+    sender: { name: fromName, email: process.env.BREVO_FROM },
+    to: [{ email: to }],
     subject,
     htmlContent: html,
   };
@@ -41,15 +36,15 @@ async function sendEmail({ to, subject, html, fromName = 'VIET HUONG CERAMICS - 
     body.attachment = attachments
       .filter(a => fs.existsSync(a.path))
       .map(a => ({
-        name:    a.filename,
+        name: a.filename,
         content: fs.readFileSync(a.path).toString('base64'),
       }));
   }
 
   const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method:  'POST',
+    method: 'POST',
     headers: {
-      'api-key':      process.env.BREVO_API_KEY,
+      'api-key': process.env.BREVO_API_KEY,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
@@ -93,13 +88,13 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
   const logoUrl = process.env.LOGO_URL || '';
 
   const rows = [
-    ['1', 'Vị trí',                 position],
-    ['2', 'Thời gian nhận việc',    formattedStartDate],
-    ['3', 'Địa điểm làm thủ tục nhận việc',      work_location],
-    ['4', 'Thời gian thử việc',     `${probation_period} tháng`],
+    ['1', 'Vị trí', position],
+    ['2', 'Thời gian nhận việc', formattedStartDate],
+    ['3', 'Địa điểm làm thủ tục nhận việc', work_location],
+    ['4', 'Thời gian thử việc', `${probation_period} tháng`],
     ['5', 'Lương Gross chính thức', `<strong style="color:#B91C1C;">${formatMoney(salary)}</strong>`],
-    ['6', 'Lương thử việc',         `${probation_salary_percent}% lương Gross &nbsp;→&nbsp; <strong style="color:#B91C1C;">${formatMoney(probationSalary)}</strong>`],
-    ['7', 'Thời gian làm việc',     work_schedule],
+    ['6', 'Lương thử việc', `${probation_salary_percent}% lương Gross &nbsp;→&nbsp; <strong style="color:#B91C1C;">${formatMoney(probationSalary)}</strong>`],
+    ['7', 'Thời gian làm việc', work_schedule],
   ];
 
   const infoRows = rows.map((row, i) => `
@@ -325,21 +320,21 @@ router.post('/send-offer', authMiddleware, async (req, res) => {
     });
 
     await sendEmail({
-      to:      app.email,
+      to: app.email,
       subject: `THƯ MỜI NHẬN VIỆC - ${position} - VIET HUONG CERAMICS`,
-      html:    emailHTML,
+      html: emailHTML,
     });
 
-  
-  appendOfferToSheet({
-  fullName:               app.full_name,
-  email:                  app.email,
-  offerPosition:          position,
-  startDate:              formattedStartDate,
-  salary:                 parseFloat(salary),
-  probationSalaryPercent: probation_salary_percent,
-  probationSalary,
-}).catch(err => console.error('[SHEET OFFER ERROR]', err.message));
+    appendOfferToSheet({
+      fullName: app.full_name,
+      email: app.email,
+      offerPosition: position,
+      startDate: formattedStartDate,
+      salary: parseFloat(salary),
+      probationSalaryPercent: probation_salary_percent,
+      probationSalary,
+      probationPeriod: probation_period,
+    }).catch(err => console.error('[SHEET OFFER ERROR]', err.message));
 
     res.json({ message: 'Đã gửi thư mời nhận việc thành công' });
   } catch (err) {
@@ -348,7 +343,7 @@ router.post('/send-offer', authMiddleware, async (req, res) => {
   }
 });
 
-// ── SEND REJECTION ───────────────────────────────────────────
+
 router.post('/send-rejection', authMiddleware, async (req, res) => {
   try {
     const { application_id } = req.body;
@@ -360,9 +355,9 @@ router.post('/send-rejection', authMiddleware, async (req, res) => {
     const emailHTML = getRejectionEmailHTML({ app });
 
     await sendEmail({
-      to:       app.email,
-      subject:  'Thông báo kết quả tuyển dụng - Viet Huong Ceramics',
-      html:     emailHTML,
+      to: app.email,
+      subject: 'Thông báo kết quả tuyển dụng - Viet Huong Ceramics',
+      html: emailHTML,
       fromName: 'Viet Huong Ceramics - Phòng Nhân Sự',
     });
 
@@ -379,10 +374,10 @@ router.post('/manual', authMiddleware, upload.single('cv'), async (req, res) => 
   const cvFile = req.file;
 
   const errors = {};
-  if (!full_name?.trim())  errors.full_name = 'Vui lòng nhập họ tên.';
-  if (!email?.trim())      errors.email     = 'Vui lòng nhập email.';
-  if (!phone?.trim())      errors.phone     = 'Vui lòng nhập số điện thoại.';
-  if (!position?.trim())   errors.position  = 'Vui lòng chọn vị trí.';
+  if (!full_name?.trim()) errors.full_name = 'Vui lòng nhập họ tên.';
+  if (!email?.trim()) errors.email = 'Vui lòng nhập email.';
+  if (!phone?.trim()) errors.phone = 'Vui lòng nhập số điện thoại.';
+  if (!position?.trim()) errors.position = 'Vui lòng chọn vị trí.';
   if (Object.keys(errors).length)
     return res.status(400).json({ success: false, errors });
 
@@ -416,15 +411,15 @@ router.post('/manual', authMiddleware, upload.single('cv'), async (req, res) => 
           receivedAt: new Date().toISOString(),
         }).catch(err => console.error('[SHEETS ERROR]', err.message));
 
-      await sendEmail({
-  to:      email,
-  subject: 'Xác nhận nhận hồ sơ ứng tuyển — Viet Huong Ceramics',
-  html:    candidateEmailHtml({ fullName: full_name, position, experience: experience || '', phone, address: address || '', cvFile }),
-  fromName: 'Viet Huong Ceramics',
-}).then(() => console.log('[EMAIL OK] Ứng viên:', email))
-  .catch(err => console.error('[EMAIL LỖI] Ứng viên:', err.message));
+        await sendEmail({
+          to: email,
+          subject: 'Xác nhận nhận hồ sơ ứng tuyển — Viet Huong Ceramics',
+          html: candidateEmailHtml({ fullName: full_name, position, experience: experience || '', phone, address: address || '', cvFile }),
+          fromName: 'Viet Huong Ceramics',
+        }).then(() => console.log('[EMAIL OK] Ứng viên:', email))
+          .catch(err => console.error('[EMAIL LỖI] Ứng viên:', err.message));
         await pool.query('UPDATE applications SET email_sent = 1 WHERE id = ?', [id]);
-        if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch {} }
+        if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch { } }
       } catch (err) {
         console.error('[MANUAL BACKGROUND ERROR]', err.message);
       }
@@ -432,7 +427,7 @@ router.post('/manual', authMiddleware, upload.single('cv'), async (req, res) => 
 
   } catch (err) {
     console.error('[DB ERROR]', err.message);
-    if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch {} }
+    if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch { } }
     return res.status(500).json({ success: false, message: 'Lỗi lưu dữ liệu.' });
   }
 });
@@ -450,11 +445,11 @@ router.get('/', authMiddleware, async (req, res) => {
     `;
     const params = [];
 
-    if (status)     { query += ' AND a.status = ?';                           params.push(status); }
-    if (position)   { query += ' AND a.position = ?';                         params.push(position); }
-    if (search)     { query += ' AND (a.full_name LIKE ? OR a.email LIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
-    if (location)   { query += ' AND j.location = ?';                         params.push(location); }
-    if (department) { query += ' AND j.department = ?';                       params.push(department); }
+    if (status) { query += ' AND a.status = ?'; params.push(status); }
+    if (position) { query += ' AND a.position = ?'; params.push(position); }
+    if (search) { query += ' AND (a.full_name LIKE ? OR a.email LIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
+    if (location) { query += ' AND j.location = ?'; params.push(location); }
+    if (department) { query += ' AND j.department = ?'; params.push(department); }
 
     query += ' ORDER BY a.received_at DESC';
     const [rows] = await pool.query(query, params);
@@ -476,19 +471,19 @@ router.put('/:id/info', authMiddleware, upload.single('cv'), async (req, res) =>
   const cvFile = req.file;
 
   const errors = {};
-  if (!full_name?.trim())  errors.full_name = 'Vui lòng nhập họ tên.';
-  if (!email?.trim())      errors.email     = 'Vui lòng nhập email.';
-  if (!phone?.trim())      errors.phone     = 'Vui lòng nhập số điện thoại.';
-  if (!position?.trim())   errors.position  = 'Vui lòng nhập vị trí ứng tuyển.';
+  if (!full_name?.trim()) errors.full_name = 'Vui lòng nhập họ tên.';
+  if (!email?.trim()) errors.email = 'Vui lòng nhập email.';
+  if (!phone?.trim()) errors.phone = 'Vui lòng nhập số điện thoại.';
+  if (!position?.trim()) errors.position = 'Vui lòng nhập vị trí ứng tuyển.';
   if (Object.keys(errors).length) {
-    if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch {} }
+    if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch { } }
     return res.status(400).json({ success: false, errors });
   }
 
   try {
     const [rows] = await pool.query('SELECT cv_link, email FROM applications WHERE id = ?', [id]);
     if (rows.length === 0) {
-      if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch {} }
+      if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch { } }
       return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ.' });
     }
 
@@ -503,7 +498,7 @@ router.put('/:id/info', authMiddleware, upload.single('cv'), async (req, res) =>
         console.error('[UPLOAD CV ERROR]', err.message);
         return res.status(500).json({ success: false, message: 'Không thể upload CV mới. Vui lòng thử lại.' });
       } finally {
-        try { fs.unlinkSync(cvFile.path); } catch {}
+        try { fs.unlinkSync(cvFile.path); } catch { }
       }
     }
 
@@ -517,9 +512,9 @@ router.put('/:id/info', authMiddleware, upload.single('cv'), async (req, res) =>
         email.trim(),
         phone.trim(),
         position.trim(),
-        experience?.trim()    || '',
-        address?.trim()       || '',
-        cover_letter?.trim()  || '',
+        experience?.trim() || '',
+        address?.trim() || '',
+        cover_letter?.trim() || '',
         cvLink,
         id,
       ]
@@ -544,7 +539,7 @@ router.put('/:id/info', authMiddleware, upload.single('cv'), async (req, res) =>
     });
   } catch (err) {
     console.error('[UPDATE INFO ERROR]', err.message);
-    if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch {} }
+    if (cvFile) { try { fs.unlinkSync(cvFile.path); } catch { } }
     res.status(500).json({ success: false, message: 'Lỗi cập nhật hồ sơ.' });
   }
 });
