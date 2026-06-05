@@ -67,10 +67,9 @@ const storage = multer.diskStorage({
   },
 });
 
-// Dòng này trong file backend
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // ✅ tăng từ 5MB lên 10MB
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'];
     const ext = path.extname(file.originalname).toLowerCase();
@@ -80,11 +79,9 @@ const upload = multer({
 
 // ── HELPERS ───────────────────────────────────────────────────
 const formatMoney = (num) => new Intl.NumberFormat('vi-VN').format(num) + ' VNĐ';
-const getHonorific = (name) => name?.toLowerCase().includes('chị') ? 'Chị' : 'Anh';
 
 // ── EMAIL TEMPLATES ───────────────────────────────────────────
 function getOfferEmailHTML({ app, position, formattedStartDate, work_location, probation_period, salary, probation_salary_percent, probationSalary, work_schedule }) {
-  const h = getHonorific(app.full_name);
   const logoUrl = process.env.LOGO_URL || '';
 
   const rows = [
@@ -148,10 +145,10 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
     </tr>
     <tr>
       <td style="padding:30px 36px 12px;">
-        <p style="margin:0 0 10px;font-size:15px;color:#111;"><strong>Kính gửi ${h}: ${app.full_name}</strong></p>
+        <p style="margin:0 0 10px;font-size:15px;color:#111;"><strong>Kính gửi Anh/Chị: ${app.full_name}</strong></p>
         <p style="margin:0 0 22px;font-size:14px;color:#555;line-height:1.9;">
-          Lời đầu tiên, Viet Huong Ceramics chân thành cảm ơn ${h} đã quan tâm đến Công ty chúng tôi.
-          Thông qua buổi trao đổi, trân trọng mời ${h} gia nhập đội ngũ Viet Huong Ceramics với thông tin nhận việc cụ thể như sau:
+          Lời đầu tiên, Viet Huong Ceramics chân thành cảm ơn Anh/Chị đã quan tâm đến Công ty chúng tôi.
+          Thông qua buổi trao đổi, trân trọng mời Anh/Chị gia nhập đội ngũ Viet Huong Ceramics với thông tin nhận việc cụ thể như sau:
         </p>
       </td>
     </tr>
@@ -188,10 +185,10 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
     <tr>
       <td style="padding:22px 36px 10px;">
         <p style="font-size:14px;color:#555;line-height:1.9;margin:0 0 10px;">
-          Khi đến nhận việc, ${h} vui lòng mang theo <strong>laptop cá nhân</strong> để phục vụ công việc.
+          Khi đến nhận việc, Anh/Chị vui lòng mang theo <strong>laptop cá nhân</strong> để phục vụ công việc.
         </p>
         <p style="font-size:14px;color:#555;line-height:1.9;margin:0 0 16px;">
-          Chúng tôi hoan nghênh sự gia nhập của ${h} và hy vọng chúng ta sẽ có sự hợp tác tốt đẹp, lâu bền.
+          Chúng tôi hoan nghênh sự gia nhập của Anh/Chị và hy vọng chúng ta sẽ có sự hợp tác tốt đẹp, lâu bền.
         </p>
         <p style="font-size:15px;color:#B91C1C;font-weight:700;margin:0 0 28px;font-style:italic;">Trân trọng!</p>
       </td>
@@ -220,7 +217,6 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
 }
 
 function getRejectionEmailHTML({ app }) {
-  const h = getHonorific(app.full_name);
   const logoUrl = process.env.LOGO_URL || '';
 
   return `<!DOCTYPE html>
@@ -245,9 +241,9 @@ function getRejectionEmailHTML({ app }) {
     </tr>
     <tr>
       <td style="padding:30px 36px 16px;">
-        <p style="margin:0 0 16px;font-size:15px;color:#111;">Kính gửi <strong>${h} ${app.full_name}</strong>,</p>
+        <p style="margin:0 0 16px;font-size:15px;color:#111;">Kính gửi <strong>Anh/Chị ${app.full_name}</strong>,</p>
         <p style="margin:0 0 16px;font-size:14px;color:#555;line-height:1.9;">
-          Trước tiên, Công ty cổ phần xây dựng gốm sứ Việt Hương xin chân thành cảm ơn ${h} đã quan tâm
+          Trước tiên, Công ty cổ phần xây dựng gốm sứ Việt Hương xin chân thành cảm ơn Anh/Chị đã quan tâm
           và dành thời gian ứng tuyển vào vị trí <strong style="color:#B91C1C;">${app.position}</strong> tại Công ty chúng tôi.
         </p>
         <table width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;">
@@ -255,19 +251,19 @@ function getRejectionEmailHTML({ app }) {
             <td style="background:#fff7f7;border-left:4px solid #B91C1C;border-radius:0 8px 8px 0;padding:16px 20px;">
               <p style="margin:0;font-size:14px;color:#555;line-height:1.9;">
                 Sau khi xem xét kỹ lưỡng hồ sơ và qua quá trình tuyển dụng, chúng tôi rất tiếc phải
-                thông báo rằng hồ sơ của ${h} <strong style="color:#B91C1C;">chưa phù hợp</strong> với yêu cầu
+                thông báo rằng hồ sơ của Anh/Chị <strong style="color:#B91C1C;">chưa phù hợp</strong> với yêu cầu
                 của vị trí này tại thời điểm hiện tại.
               </p>
             </td>
           </tr>
         </table>
         <p style="margin:0 0 14px;font-size:14px;color:#555;line-height:1.9;">
-          Quyết định này không phản ánh năng lực của ${h} mà chỉ đơn giản là sự phù hợp với yêu cầu cụ thể của vị trí tuyển dụng lần này.
+          Quyết định này không phản ánh năng lực của Anh/Chị mà chỉ đơn giản là sự phù hợp với yêu cầu cụ thể của vị trí tuyển dụng lần này.
         </p>
         <p style="margin:0 0 14px;font-size:14px;color:#555;line-height:1.9;">
-          Chúng tôi rất trân trọng sự quan tâm của ${h} và hy vọng sẽ có cơ hội hợp tác trong tương lai khi có các vị trí phù hợp hơn.
+          Chúng tôi rất trân trọng sự quan tâm của Anh/Chị và hy vọng sẽ có cơ hội hợp tác trong tương lai khi có các vị trí phù hợp hơn.
         </p>
-        <p style="margin:0 0 26px;font-size:14px;color:#555;line-height:1.9;">Chúc ${h} thành công trong sự nghiệp và tìm được công việc như ý!</p>
+        <p style="margin:0 0 26px;font-size:14px;color:#555;line-height:1.9;">Chúc Anh/Chị thành công trong sự nghiệp và tìm được công việc như ý!</p>
         <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #f5e0e0;padding-top:20px;">
           <tr>
             <td>
@@ -458,13 +454,8 @@ router.get('/', authMiddleware, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-// ── THÊM ROUTE NÀY VÀO FILE BACKEND (applications.js) ────────
-// Đặt TRƯỚC route PUT /:id hiện tại để tránh conflict
 
-// Trong file applications.js, thay route PUT /:id/info bằng đoạn này:
-// Cần thêm bcrypt ở đầu file nếu chưa có:
-// const bcrypt = require('bcrypt');
-
+// ── UPDATE INFO ──────────────────────────────────────────────
 router.put('/:id/info', authMiddleware, upload.single('cv'), async (req, res) => {
   const { id } = req.params;
   const { full_name, email, phone, position, experience, address, cover_letter } = req.body;
@@ -520,10 +511,9 @@ router.put('/:id/info', authMiddleware, upload.single('cv'), async (req, res) =>
       ]
     );
 
-    // ── Nếu email thay đổi → cập nhật password = hash(email mới) ──
     if (emailChanged) {
       const bcrypt = require('bcrypt');
-      const newPassword = email.trim(); // password mới = email mới
+      const newPassword = email.trim();
       const hashed = await bcrypt.hash(newPassword, 10);
       await pool.query(
         'UPDATE applications SET password_hash = ? WHERE id = ?',
@@ -535,7 +525,7 @@ router.put('/:id/info', authMiddleware, upload.single('cv'), async (req, res) =>
     res.json({
       success: true,
       cv_link: cvLink,
-      password_reset: emailChanged, // frontend có thể dùng để thông báo
+      password_reset: emailChanged,
     });
   } catch (err) {
     console.error('[UPDATE INFO ERROR]', err.message);
@@ -544,8 +534,7 @@ router.put('/:id/info', authMiddleware, upload.single('cv'), async (req, res) =>
   }
 });
 
-
-// ── UPDATE ───────────────────────────────────────────────────
+// ── UPDATE STATUS ────────────────────────────────────────────
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const { status, note } = req.body;
@@ -566,7 +555,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// ── ERROR HANDLER ─────────────────────────────────────────────  ← THÊM VÀO ĐÂY
+// ── ERROR HANDLER ─────────────────────────────────────────────
 router.use((err, req, res, next) => {
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(400).json({ success: false, message: 'File quá lớn, vui lòng upload file dưới 10MB.' });
