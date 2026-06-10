@@ -79,8 +79,6 @@ const upload = multer({
 
 // ── HELPERS ───────────────────────────────────────────────────
 const formatMoney = (num) => new Intl.NumberFormat('vi-VN').format(num) + ' VNĐ';
-
-// ── EMAIL TEMPLATES ───────────────────────────────────────────
 function getOfferEmailHTML({ app, position, formattedStartDate, work_location, probation_period, salary, probation_salary_percent, probationSalary, work_schedule }) {
   const logoUrl = process.env.LOGO_URL || '';
 
@@ -96,40 +94,68 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
 
   const infoRows = rows.map((row, i) => `
     <tr style="background:${i % 2 === 0 ? '#ffffff' : '#fdf6f6'};">
-      <td width="32" style="padding:11px 0 11px 14px;vertical-align:top;">
-        <div style="width:22px;height:22px;border-radius:50%;background:#B91C1C;color:#fff;font-size:11px;font-weight:700;font-family:Arial,sans-serif;text-align:center;line-height:22px;">${row[0]}</div>
+      <td class="num-td" width="32" style="padding:11px 0 11px 14px;vertical-align:top;">
+        <div class="num-div" style="width:22px;height:22px;border-radius:50%;background:#B91C1C;color:#fff;font-size:11px;font-weight:700;font-family:Arial,sans-serif;text-align:center;line-height:22px;">${row[0]}</div>
       </td>
-      <td width="185" style="padding:11px 8px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:#B91C1C;vertical-align:top;">${row[1]}</td>
-      <td style="padding:11px 14px 11px 0;font-size:14px;color:#222;vertical-align:top;line-height:1.7;">${row[2]}</td>
+      <td class="label-td" width="185" style="padding:11px 8px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:#B91C1C;vertical-align:top;">${row[1]}</td>
+      <td class="value-td" style="padding:11px 14px 11px 0;font-size:14px;color:#222;vertical-align:top;line-height:1.7;">${row[2]}</td>
     </tr>
   `).join('');
 
   return `<!DOCTYPE html>
 <html lang="vi">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <style>
+    @media only screen and (max-width:600px) {
+      table { width: 100% !important; }
+      .email-card { width: 100% !important; border-radius: 0 !important; }
+      .header-cell { padding: 14px 12px 0 !important; }
+      .logo-img { width: 44px !important; height: 44px !important; }
+      .company-name { font-size: 11px !important; }
+      .company-sub { font-size: 10px !important; }
+      .company-addr { font-size: 9px !important; }
+      .republic-td { display: none !important; }
+      .title-td { padding: 14px 12px 18px !important; }
+      .title-text { font-size: 17px !important; letter-spacing: 1px !important; }
+      .body-td { padding: 20px 14px 10px !important; }
+      .greeting { font-size: 14px !important; }
+      .intro { font-size: 13px !important; line-height: 1.8 !important; }
+      .table-td { padding: 0 10px !important; }
+      .num-td { padding: 10px 0 10px 10px !important; width: 28px !important; }
+      .num-div { width: 20px !important; height: 20px !important; font-size: 10px !important; line-height: 20px !important; }
+      .label-td { padding: 10px 6px !important; font-size: 12px !important; width: 110px !important; }
+      .value-td { padding: 10px 10px 10px 0 !important; font-size: 13px !important; }
+      .extra-td { padding: 16px 14px 8px !important; }
+      .extra-text { font-size: 13px !important; }
+      .footer-inner { padding: 14px !important; }
+    }
+  </style>
+</head>
 <body style="margin:0;padding:0;background:#f0eded;font-family:'Times New Roman',Georgia,serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0eded;padding:36px 0;">
   <tr><td align="center">
-  <table width="660" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 6px 32px rgba(0,0,0,0.12);">
+  <table class="email-card" width="660" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 6px 32px rgba(0,0,0,0.12);">
     <tr>
-      <td style="background:#B91C1C;padding:22px 28px 0;">
+      <td class="header-cell" style="background:#B91C1C;padding:22px 28px 0;">
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
             <td style="vertical-align:middle;" width="55%">
               <table cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="padding-right:12px;vertical-align:middle;">
-                    <img src="${logoUrl}" alt="Việt Hương" width="58" height="58" style="display:block;border-radius:8px;background:#fff;padding:5px;object-fit:contain;" />
+                  <td class="logo-td" style="padding-right:12px;vertical-align:middle;">
+                    <img class="logo-img" src="${logoUrl}" alt="Việt Hương" width="58" height="58" style="display:block;border-radius:8px;background:#fff;padding:5px;object-fit:contain;" />
                   </td>
                   <td style="vertical-align:middle;">
-                    <div style="color:#fff;font-family:Arial,sans-serif;font-size:13px;font-weight:700;letter-spacing:0.4px;line-height:1.4;">VIET HUONG CERAMICS</div>
-                    <div style="color:rgba(255,255,255,0.72);font-family:Arial,sans-serif;font-size:11px;margin-top:2px;">Công ty cổ phần xây dựng gốm sứ Việt Hương</div>
-                    <div style="color:rgba(255,255,255,0.60);font-family:Arial,sans-serif;font-size:10px;margin-top:1px;">133 Trung Lương 14, P. Hòa Xuân, TP. Đà Nẵng</div>
+                    <div class="company-name" style="color:#fff;font-family:Arial,sans-serif;font-size:13px;font-weight:700;letter-spacing:0.4px;line-height:1.4;">VIET HUONG CERAMICS</div>
+                    <div class="company-sub" style="color:rgba(255,255,255,0.72);font-family:Arial,sans-serif;font-size:11px;margin-top:2px;">Công ty cổ phần xây dựng gốm sứ Việt Hương</div>
+                    <div class="company-addr" style="color:rgba(255,255,255,0.60);font-family:Arial,sans-serif;font-size:10px;margin-top:1px;">133 Trung Lương 14, P. Hòa Xuân, TP. Đà Nẵng</div>
                   </td>
                 </tr>
               </table>
             </td>
-            <td style="vertical-align:top;text-align:right;" width="45%">
+            <td class="republic-td" style="vertical-align:top;text-align:right;" width="45%">
               <div style="color:rgba(255,255,255,0.95);font-family:Arial,sans-serif;font-size:11px;font-weight:700;line-height:1.6;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
               <div style="color:rgba(255,255,255,0.80);font-family:Arial,sans-serif;font-size:11px;margin-right:32px;">Độc lập – Tự do – Hạnh phúc</div>
             </td>
@@ -138,40 +164,40 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
       </td>
     </tr>
     <tr>
-      <td style="background:#B91C1C;padding:18px 28px 24px;text-align:center;">
-        <div style="color:#fff;font-family:Arial,sans-serif;font-size:22px;font-weight:700;letter-spacing:3px;text-transform:uppercase;">THƯ MỜI NHẬN VIỆC</div>
+      <td class="title-td" style="background:#B91C1C;padding:18px 28px 24px;text-align:center;">
+        <div class="title-text" style="color:#fff;font-family:Arial,sans-serif;font-size:22px;font-weight:700;letter-spacing:3px;text-transform:uppercase;">THƯ MỜI NHẬN VIỆC</div>
         <div style="width:56px;height:3px;background:rgba(255,255,255,0.45);margin:10px auto 0;border-radius:2px;"></div>
       </td>
     </tr>
     <tr>
-      <td style="padding:30px 36px 12px;">
-      <p style="margin:0 0 10px;font-size:15px;color:#111;"><strong>Kính gửi Anh/Chị: ${app.full_name}</strong></p>
-        <p style="margin:0 0 22px;font-size:14px;color:#555;line-height:1.9;">
+      <td class="body-td" style="padding:30px 36px 12px;">
+        <p class="greeting" style="margin:0 0 10px;font-size:15px;color:#111;"><strong>Kính gửi Anh/Chị: ${app.full_name}</strong></p>
+        <p class="intro" style="margin:0 0 22px;font-size:14px;color:#555;line-height:1.9;">
           Lời đầu tiên, Viet Huong Ceramics chân thành cảm ơn Anh/Chị đã quan tâm đến Công ty chúng tôi.
           Thông qua buổi trao đổi, trân trọng mời Anh/Chị gia nhập đội ngũ Viet Huong Ceramics với thông tin nhận việc cụ thể như sau:
         </p>
       </td>
     </tr>
     <tr>
-      <td style="padding:0 36px;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:8px;overflow:hidden;border:1px solid #f5e0e0;">
+      <td class="table-td" style="padding:0 36px;">
+        <table class="info-table" width="100%" cellpadding="0" cellspacing="0" style="border-radius:8px;overflow:hidden;border:1px solid #f5e0e0;">
           ${infoRows}
           <tr style="background:#ffffff;">
-            <td width="32" style="padding:11px 0 11px 14px;vertical-align:top;">
-              <div style="width:22px;height:22px;border-radius:50%;background:#B91C1C;color:#fff;font-size:11px;font-weight:700;font-family:Arial,sans-serif;text-align:center;line-height:22px;">8</div>
+            <td class="num-td" width="32" style="padding:11px 0 11px 14px;vertical-align:top;">
+              <div class="num-div" style="width:22px;height:22px;border-radius:50%;background:#B91C1C;color:#fff;font-size:11px;font-weight:700;font-family:Arial,sans-serif;text-align:center;line-height:22px;">8</div>
             </td>
-            <td width="185" style="padding:11px 8px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:#B91C1C;vertical-align:top;">Chính sách công ty</td>
-            <td style="padding:11px 14px 11px 0;font-size:13px;color:#555;vertical-align:top;line-height:1.9;">
+            <td class="label-td" width="185" style="padding:11px 8px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:#B91C1C;vertical-align:top;">Chính sách công ty</td>
+            <td class="value-td" style="padding:11px 14px 11px 0;font-size:13px;color:#555;vertical-align:top;line-height:1.9;">
               Theo Luật Lao động VN, Nội quy lao động và Quy định tài chính của Công ty.<br>
               Nội dung cụ thể sẽ được thể hiện đầy đủ trên Hợp đồng lao động.
             </td>
           </tr>
           <tr style="background:#fdf6f6;">
-            <td width="32" style="padding:11px 0 11px 14px;vertical-align:top;">
-              <div style="width:22px;height:22px;border-radius:50%;background:#B91C1C;color:#fff;font-size:11px;font-weight:700;font-family:Arial,sans-serif;text-align:center;line-height:22px;">9</div>
+            <td class="num-td" width="32" style="padding:11px 0 11px 14px;vertical-align:top;">
+              <div class="num-div" style="width:22px;height:22px;border-radius:50%;background:#B91C1C;color:#fff;font-size:11px;font-weight:700;font-family:Arial,sans-serif;text-align:center;line-height:22px;">9</div>
             </td>
-            <td width="185" style="padding:11px 8px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:#B91C1C;vertical-align:top;">Hồ sơ cần bổ sung</td>
-            <td style="padding:11px 14px 11px 0;font-size:13px;color:#555;vertical-align:top;line-height:2.1;">
+            <td class="label-td" width="185" style="padding:11px 8px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:#B91C1C;vertical-align:top;">Hồ sơ cần bổ sung</td>
+            <td class="value-td" style="padding:11px 14px 11px 0;font-size:13px;color:#555;vertical-align:top;line-height:2.1;">
               ✔ Sơ yếu lý lịch – 01 bản (có xác nhận địa phương)<br>
               ✔ Giấy khám sức khoẻ – 01 bản<br>
               ✔ Căn cước công dân – 02 bản photo công chứng<br>
@@ -183,11 +209,11 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
       </td>
     </tr>
     <tr>
-      <td style="padding:22px 36px 10px;">
-        <p style="font-size:14px;color:#555;line-height:1.9;margin:0 0 10px;">
+      <td class="extra-td" style="padding:22px 36px 10px;">
+        <p class="extra-text" style="font-size:14px;color:#555;line-height:1.9;margin:0 0 10px;">
           Khi đến nhận việc, Anh/Chị vui lòng mang theo <strong>laptop cá nhân</strong> để phục vụ công việc.
         </p>
-        <p style="font-size:14px;color:#555;line-height:1.9;margin:0 0 16px;">
+        <p class="extra-text" style="font-size:14px;color:#555;line-height:1.9;margin:0 0 16px;">
           Chúng tôi hoan nghênh sự gia nhập của Anh/Chị và hy vọng chúng ta sẽ có sự hợp tác tốt đẹp, lâu bền.
         </p>
         <p style="font-size:15px;color:#B91C1C;font-weight:700;margin:0 0 28px;font-style:italic;">Trân trọng!</p>
@@ -195,7 +221,7 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
     </tr>
     <tr>
       <td style="background:#ffffff;padding:18px 28px;border-top:1px solid #f5e0e0;">
-        <table width="100%" cellpadding="0" cellspacing="0">
+        <table class="footer-inner" width="100%" cellpadding="0" cellspacing="0">
           <tr>
             <td style="color:#555555;font-family:Arial,sans-serif;font-size:12px;line-height:1.9;">
               <strong style="color:#B91C1C;font-size:13px;">Công ty cổ phần xây dựng gốm sứ Việt Hương</strong><br>
@@ -315,7 +341,6 @@ router.post('/send-offer', authMiddleware, async (req, res) => {
       probation_period, salary, probation_salary_percent, probationSalary, work_schedule
     });
 
-    console.log('[DEBUG EMAIL HTML]', emailHTML.substring(0, 500));
     await sendEmail({
       to: app.email,
       subject: `THƯ MỜI NHẬN VIỆC - ${position} - VIET HUONG CERAMICS`,
