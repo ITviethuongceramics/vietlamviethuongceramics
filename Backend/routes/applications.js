@@ -145,7 +145,7 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
     </tr>
     <tr>
       <td style="padding:30px 36px 12px;">
-        <p style="margin:0 0 10px;font-size:15px;color:#111;"><strong>Kính gửi Anh/Chị: ${app.full_name}</strong></p>
+      <p style="margin:0 0 10px;font-size:15px;color:#111;"><strong>Kính gửi Anh/Chị: ${app.full_name}</strong></p>
         <p style="margin:0 0 22px;font-size:14px;color:#555;line-height:1.9;">
           Lời đầu tiên, Viet Huong Ceramics chân thành cảm ơn Anh/Chị đã quan tâm đến Công ty chúng tôi.
           Thông qua buổi trao đổi, trân trọng mời Anh/Chị gia nhập đội ngũ Viet Huong Ceramics với thông tin nhận việc cụ thể như sau:
@@ -315,6 +315,7 @@ router.post('/send-offer', authMiddleware, async (req, res) => {
       probation_period, salary, probation_salary_percent, probationSalary, work_schedule
     });
 
+    console.log('[DEBUG EMAIL HTML]', emailHTML.substring(0, 500));
     await sendEmail({
       to: app.email,
       subject: `THƯ MỜI NHẬN VIỆC - ${position} - VIET HUONG CERAMICS`,
