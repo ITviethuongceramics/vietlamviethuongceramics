@@ -24,13 +24,19 @@ function authMiddleware(req, res, next) {
 }
 
 
-async function sendEmail({ to, subject, html, fromName = 'VIET HUONG CERAMICS - Phòng Nhân Sự', attachments = [] }) {
+async function sendEmail({ to, subject, html, fromName = 'VIET HUONG CERAMICS - Phòng Nhân Sự', attachments = [], cc }) {
   const body = {
     sender: { name: fromName, email: process.env.BREVO_FROM },
     to: [{ email: to }],
     subject,
     htmlContent: html,
   };
+
+  if (cc) {
+    body.cc = Array.isArray(cc)
+      ? cc.map(e => ({ email: e }))
+      : [{ email: cc }];
+  }
 
   if (attachments.length > 0) {
     body.attachment = attachments
@@ -344,6 +350,7 @@ router.post('/send-offer', authMiddleware, async (req, res) => {
     await sendEmail({
       to: app.email,
       subject: `THƯ MỜI NHẬN VIỆC - ${position} - VIET HUONG CERAMICS`,
+      cc: 'itviethuong@viethuongceramics.com', 
       html: emailHTML,
     });
 
