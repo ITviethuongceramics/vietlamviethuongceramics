@@ -94,7 +94,7 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
     ['3', 'Địa điểm làm thủ tục nhận việc', work_location],
     ['4', 'Thời gian thử việc', `${probation_period} tháng`],
     ['5', 'Lương Gross chính thức', `<strong style="color:#B91C1C;">${formatMoney(salary)}</strong>`],
-    ['6', 'Lương thử việc', `${probation_salary_percent}% lương Gross &nbsp;→&nbsp; <strong style="color:#B91C1C;">${formatMoney(probationSalary)}</strong>`],
+   ['6', 'Lương thử việc', `${probation_salary_percent}% lương Gross`],
     ['7', 'Thời gian làm việc', work_schedule],
   ];
 
