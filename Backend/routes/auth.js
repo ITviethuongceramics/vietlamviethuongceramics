@@ -7,7 +7,7 @@ router.get('/debug-db', (req, res) => {
     db_port: process.env.DB_PORT,
     db_user: process.env.DB_USER,
     db_name: process.env.DB_NAME,
-    cloudinary: process.env.CLOUDINARY_CLOUD_NAME
+    cloudinary: process.env.CLOUDINARY_CLOUD_NAME, version: 'v2_sanitized'
   });
 });
 
