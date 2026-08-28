@@ -104,36 +104,69 @@ Trả về JSON theo đúng format sau (không thêm markdown, không thêm text
 // ============================================================
 // Tổng hợp nhận xét toàn bài bằng Groq LLM
 // ============================================================
-function generateFallbackSummary({ candidateName, testTitle, testType, totalScore, maxScore, percentage, passed, passingScore }) {
-  const statusStr = passed ? 'đạt yêu cầu' : 'chưa đạt yêu cầu';
-  let perfText = '';
-  if (percentage >= 85) {
-    perfText = `Ứng viên thể hiện năng lực xuất sắc với số điểm ${totalScore}/${maxScore} (${percentage}%), đáp ứng vượt mức kỳ vọng cho vị trí tuyển dụng.`;
-  } else if (percentage >= 60) {
-    perfText = `Ứng viên hoàn thành khá tốt bài test với kết quả ${totalScore}/${maxScore} (${percentage}%), thể hiện nền tảng kiến thức vững vàng.`;
+function generateFallbackSummary({ candidateName, testTitle, testType, totalScore, maxScore, percentage, passed, passingScore, answers = [] }) {
+  const totalQuestions = answers.length;
+  let correctIndices = [];
+  let incorrectIndices = [];
+
+  answers.forEach((a, idx) => {
+    const qNum = idx + 1;
+    const score = a.score || 0;
+    const maxP = a.max_points || 10;
+    if (score > 0 && score >= (maxP * 0.6)) {
+      correctIndices.push(qNum);
+    } else {
+      incorrectIndices.push(qNum);
+    }
+  });
+
+  const statusStr = passed ? 'đạt yêu cầu tuyển dụng' : 'không đạt yêu cầu tuyển dụng';
+  let detailText = '';
+
+  if (totalQuestions > 0 && correctIndices.length > 0) {
+    if (incorrectIndices.length === 0) {
+      detailText = `Ứng viên ${candidateName} đã thể hiện sự xuất sắc tuyệt đối khi trả lời chính xác tất cả các câu hỏi trong bài test.`;
+    } else {
+      const correctRange = correctIndices.length === 1 ? `câu hỏi số ${correctIndices[0]}` : `các câu hỏi từ ${correctIndices[0]} đến ${correctIndices[correctIndices.length - 1]}`;
+      const incorrectList = incorrectIndices.join(', ');
+      detailText = `Ứng viên ${candidateName} đã thể hiện sự tự tin và kiến thức vững chắc trong phần lớn các câu hỏi của bài test, đặc biệt là ${correctRange}. Tuy nhiên, ứng viên còn hạn chế ở một số câu hỏi quan trọng, đặc biệt là câu ${incorrectList}, nơi chưa đạt được điểm tối đa.`;
+    }
   } else {
-    perfText = `Ứng viên đạt ${totalScore}/${maxScore} (${percentage}%), chưa đạt mức điểm chuẩn tối thiểu.`;
+    detailText = `Ứng viên ${candidateName} đã hoàn thành phần thi nhưng cần trau dồi thêm về kiến thức chuyên môn.`;
   }
 
-  return `Ứng viên ${candidateName} đã hoàn thành bài test "${testTitle}" với kết quả ${statusStr} (đạt ${percentage}% so với mức chuẩn ${passingScore}%). ${perfText} Trợ lý ảo VIETHUONG CERAMICS đề xuất Hội đồng Tuyển dụng xem xét chi tiết bài làm của ứng viên.`;
+  const conclusion = passed 
+    ? `Với tổng điểm ${percentage}%, ứng viên ${statusStr} và thể hiện tiềm năng đóng góp tốt cho vị trí ${testTitle}.` 
+    : `Với tổng điểm ${percentage}%, ứng viên ${statusStr}, nhưng vẫn có tiềm năng phát triển nếu được đào tạo và huấn luyện thêm.`;
+
+  return `${detailText} Điều này cho thấy ứng viên cần tiếp tục cải thiện kỹ năng chuyên môn để đáp ứng tốt hơn yêu cầu công việc. ${conclusion}`;
 }
 
 async function generateSummary({ candidateName, testTitle, testType, answers = [], totalScore, maxScore, percentage, passed, passingScore }) {
   try {
     const answerSummary = answers.map((a, i) =>
-      `Câu ${i + 1} (${a.question_type}): ${a.score}/${a.max_points} điểm${a.feedback ? ' — ' + a.feedback : ''}`
+      `Câu ${i + 1} (${a.question_type || 'câu hỏi'}): ${a.score}/${a.max_points} điểm${a.feedback ? ' — ' + a.feedback : ''}`
     ).join('\n');
 
     const prompt = `
-Bạn là HR manager. Hãy viết nhận xét tổng hợp kết quả bài test tuyển dụng.
+Bạn là Giám đốc Nhân sự (HR Director). Hãy viết nhận xét đánh giá tổng hợp kết quả bài test tuyển dụng cho ứng viên.
 
-Ứng viên: ${candidateName}
-Bài test: ${testTitle} (${testType})
-Tổng điểm: ${totalScore}/${maxScore} (${percentage}%)
-Điểm đạt yêu cầu: ${passingScore}%
-Kết quả: ${passed ? 'ĐẠT' : 'KHÔNG ĐẠT'}
+Thông tin ứng viên & Bài test:
+- Ứng viên: ${candidateName}
+- Bài test / Vị trí: ${testTitle} (${testType})
+- Tổng điểm: ${totalScore}/${maxScore} (${percentage}%)
+- Điểm chuẩn yêu cầu: ${passingScore}%
+- Kết quả chung: ${passed ? 'ĐẠT YÊU CẦU' : 'KHÔNG ĐẠT YÊU CẦU'}
 
-Viết nhận xét tổng hợp bằng tiếng Việt, ngắn gọn 3-5 câu, khách quan, chuyên nghiệp.
+Chi tiết điểm số từng câu:
+${answerSummary}
+
+YÊU CẦU VIẾT NHẬN XẾT:
+1. Viết 1 đoạn văn từ 3-5 câu bằng tiếng Việt tự nhiên, sâu sắc, như Giám đốc Nhân sự nhận xét.
+2. KHÔNG lặp lại các con số % khô cứng dạng "đạt 65% so với mức chuẩn 70%, 65/100 (65%)".
+3. Phân tích cụ thể các câu ứng viên làm tốt (ví dụ: các câu từ câu X đến câu Y) và nêu rõ các câu ứng viên chưa đạt điểm tối đa (ví dụ: câu A, B, C).
+4. Đưa ra lời khuyên hoặc tiềm năng phát triển của ứng viên đối với vị trí tuyển dụng.
+5. Chỉ trả về duy nhất đoạn văn nhận xét, không kèm tiêu đề hay ký tự thừa.
 `.trim();
 
     const completion = await groq.chat.completions.create({
@@ -144,8 +177,8 @@ Viết nhận xét tổng hợp bằng tiếng Việt, ngắn gọn 3-5 câu, kh
 
     return completion.choices[0].message.content.trim();
   } catch (err) {
-    console.error('Groq AI API Error, using professional fallback summary:', err.message);
-    return generateFallbackSummary({ candidateName, testTitle, testType, totalScore, maxScore, percentage, passed, passingScore });
+    console.error('Groq AI API Error, using Review B style fallback summary:', err.message);
+    return generateFallbackSummary({ candidateName, testTitle, testType, totalScore, maxScore, percentage, passed, passingScore, answers });
   }
 }
 

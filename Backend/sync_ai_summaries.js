@@ -22,7 +22,7 @@ async function syncAllAiSummaries() {
     JOIN test_assignments ta ON ta.id = tr.assignment_id
     JOIN applications a ON a.id = ta.application_id
     JOIN tests t ON t.id = ta.test_id
-    WHERE tr.ai_summary IS NULL OR TRIM(tr.ai_summary) = ''
+    
   `);
 
   console.log(`📌 FOUND ${rows.length} HISTORICAL TEST RESULTS NEEDING AI SUMMARY GENERATION.`);
