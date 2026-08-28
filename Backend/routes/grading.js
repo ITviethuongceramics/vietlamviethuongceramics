@@ -269,23 +269,25 @@ router.post('/assignments/:assignment_id/grade', async (req, res) => {
 
     await conn.commit();
 
-    // Gửi email kết quả cho HR
-    await notifyHR({
-      assignment,
-      total_score,
-      max_score,
-      percentage,
-      passed,
-      ai_summary,
-      gradedAnswers,
-      assignment_id
-    });
-
-    // Đánh dấu đã notify
-    await pool.query(
-      'UPDATE test_results SET notified_hr = 1 WHERE assignment_id = ?',
-      [assignment_id]
-    );
+    // Gửi email kết quả cho HR (nếu lỗi email thì log chứ không crash API)
+    try {
+      await notifyHR({
+        assignment,
+        total_score,
+        max_score,
+        percentage,
+        passed,
+        ai_summary,
+        gradedAnswers,
+        assignment_id
+      });
+      await pool.query(
+        'UPDATE test_results SET notified_hr = 1 WHERE assignment_id = ?',
+        [assignment_id]
+      );
+    } catch (emailErr) {
+      console.error('Failed to send HR notification email:', emailErr.message);
+    }
 
 res.json({
   message:     'Chấm điểm hoàn tất',
