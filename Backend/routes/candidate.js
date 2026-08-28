@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../data/db');
+const { generateSummary } = require('../services/gradingService');
 const { candidateMiddleware } = require('./auth');
 
 // ============================================================
@@ -304,17 +305,45 @@ router.post('/assignments/:assignment_id/submit', candidateMiddleware, async (re
         : 0;
       const passed = percentage >= assignment.passing_score ? 1 : 0;
 
+      let ai_summary = null;
+      try {
+        const [appRows] = await conn.query('SELECT full_name FROM applications WHERE id = ?', [application_id]);
+        const candidateName = appRows[0]?.full_name || 'Ứng viên';
+        const [ansRows] = await conn.query(
+          `SELECT ta.score, tq.points as max_points, tq.question_type 
+           FROM test_answers ta
+           JOIN test_questions tq ON tq.id = ta.question_id
+           WHERE ta.assignment_id = ?`,
+          [assignment_id]
+        );
+
+        ai_summary = await generateSummary({
+          candidateName,
+          testTitle: assignment.title,
+          testType: assignment.type,
+          answers: ansRows,
+          totalScore: auto_score,
+          maxScore: max_total,
+          percentage,
+          passed,
+          passingScore: assignment.passing_score
+        });
+      } catch (err) {
+        console.error('Auto generateSummary error:', err.message);
+      }
+
       await conn.query(
         `INSERT INTO test_results
-           (assignment_id, total_score, max_score, percentage, passed, typing_wpm, typing_accuracy)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
+           (assignment_id, total_score, max_score, percentage, passed, typing_wpm, typing_accuracy, ai_summary)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE
            total_score     = VALUES(total_score),
            max_score       = VALUES(max_score),
            percentage      = VALUES(percentage),
            passed          = VALUES(passed),
            typing_wpm      = VALUES(typing_wpm),
-           typing_accuracy = VALUES(typing_accuracy)`,
+           typing_accuracy = VALUES(typing_accuracy),
+           ai_summary      = VALUES(ai_summary)`,
         [
           assignment_id,
           auto_score,
@@ -322,7 +351,8 @@ router.post('/assignments/:assignment_id/submit', candidateMiddleware, async (re
           percentage,
           passed,
           typing_wpm_val,
-          typing_accuracy_val
+          typing_accuracy_val,
+          ai_summary
         ]
       );
 

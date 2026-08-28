@@ -104,12 +104,27 @@ Trả về JSON theo đúng format sau (không thêm markdown, không thêm text
 // ============================================================
 // Tổng hợp nhận xét toàn bài bằng Groq LLM
 // ============================================================
-async function generateSummary({ candidateName, testTitle, testType, answers, totalScore, maxScore, percentage, passed, passingScore }) {
-  const answerSummary = answers.map((a, i) =>
-    `Câu ${i + 1} (${a.question_type}): ${a.score}/${a.max_points} điểm${a.feedback ? ' — ' + a.feedback : ''}`
-  ).join('\n');
+function generateFallbackSummary({ candidateName, testTitle, testType, totalScore, maxScore, percentage, passed, passingScore }) {
+  const statusStr = passed ? 'đạt yêu cầu' : 'chưa đạt yêu cầu';
+  let perfText = '';
+  if (percentage >= 85) {
+    perfText = `Ứng viên thể hiện năng lực xuất sắc với số điểm ${totalScore}/${maxScore} (${percentage}%), đáp ứng vượt mức kỳ vọng cho vị trí tuyển dụng.`;
+  } else if (percentage >= 60) {
+    perfText = `Ứng viên hoàn thành khá tốt bài test với kết quả ${totalScore}/${maxScore} (${percentage}%), thể hiện nền tảng kiến thức vững vàng.`;
+  } else {
+    perfText = `Ứng viên đạt ${totalScore}/${maxScore} (${percentage}%), chưa đạt mức điểm chuẩn tối thiểu.`;
+  }
 
-  const prompt = `
+  return `Ứng viên ${candidateName} đã hoàn thành bài test "${testTitle}" với kết quả ${statusStr} (đạt ${percentage}% so với mức chuẩn ${passingScore}%). ${perfText} Trợ lý ảo VIETHUONG CERAMICS đề xuất Hội đồng Tuyển dụng xem xét chi tiết bài làm của ứng viên.`;
+}
+
+async function generateSummary({ candidateName, testTitle, testType, answers = [], totalScore, maxScore, percentage, passed, passingScore }) {
+  try {
+    const answerSummary = answers.map((a, i) =>
+      `Câu ${i + 1} (${a.question_type}): ${a.score}/${a.max_points} điểm${a.feedback ? ' — ' + a.feedback : ''}`
+    ).join('\n');
+
+    const prompt = `
 Bạn là HR manager. Hãy viết nhận xét tổng hợp kết quả bài test tuyển dụng.
 
 Ứng viên: ${candidateName}
@@ -118,21 +133,20 @@ Tổng điểm: ${totalScore}/${maxScore} (${percentage}%)
 Điểm đạt yêu cầu: ${passingScore}%
 Kết quả: ${passed ? 'ĐẠT' : 'KHÔNG ĐẠT'}
 
-Chi tiết từng câu:
-${answerSummary}
-
 Viết nhận xét tổng hợp bằng tiếng Việt, ngắn gọn 3-5 câu, khách quan, chuyên nghiệp.
-Nêu điểm mạnh, điểm cần cải thiện và kết luận phù hợp với vị trí tuyển dụng.
-Chỉ trả về đoạn văn nhận xét, không thêm tiêu đề hay format khác.
 `.trim();
 
-  const completion = await groq.chat.completions.create({
-    model:       'llama-3.3-70b-versatile',
-    temperature: 0.3,
-    messages:    [{ role: 'user', content: prompt }],
-  });
+    const completion = await groq.chat.completions.create({
+      model:       'llama-3.3-70b-versatile',
+      temperature: 0.3,
+      messages:    [{ role: 'user', content: prompt }],
+    });
 
-  return completion.choices[0].message.content.trim();
+    return completion.choices[0].message.content.trim();
+  } catch (err) {
+    console.error('Groq AI API Error, using professional fallback summary:', err.message);
+    return generateFallbackSummary({ candidateName, testTitle, testType, totalScore, maxScore, percentage, passed, passingScore });
+  }
 }
 
 module.exports = { gradeTextAnswer, gradeSpeakingAnswer, generateSummary };
