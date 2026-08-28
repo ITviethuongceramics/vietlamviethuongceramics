@@ -482,7 +482,14 @@ router.get('/', authMiddleware, async (req, res) => {
 
     query += ' ORDER BY a.received_at DESC';
     const [rows] = await pool.query(query, params);
-    res.json(rows);
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'kto2dghj';
+    const sanitizedRows = rows.map(r => {
+      if (r.cv_link && r.cv_link.includes('dq8cmcln9')) {
+        r.cv_link = r.cv_link.replace(/dq8cmcln9/g, cloudName);
+      }
+      return r;
+    });
+    res.json(sanitizedRows);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
