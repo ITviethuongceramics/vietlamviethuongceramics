@@ -14,14 +14,31 @@ const FEEDS = {
   'tin-san-pham': 'https://viethuongceramics.com/category/tin-san-pham/feed/?posts_per_rss=50',
 };
 
+function isJunkImage(url = '') {
+  if (!url) return true;
+  const lower = url.toLowerCase();
+  return (
+    lower.includes('watermark') ||
+    lower.includes('nirogranite') ||
+    lower.includes('logo') ||
+    lower.includes('avatar') ||
+    lower.includes('gravatar') ||
+    lower.includes('1x1')
+  );
+}
+
 function extractImage(str = '') {
   const srcset = str.match(/srcset=["']([^"']+)["']/);
   if (srcset) {
     const firstUrl = srcset[1].split(',')[0].trim().split(' ')[0];
-    if (firstUrl?.startsWith('https')) return firstUrl;
+    if (firstUrl?.startsWith('https') && !isJunkImage(firstUrl)) return firstUrl;
   }
   const m = str.match(/<img[^>]+src=["']([^"']+)["']/);
-  return m ? m[1].replace(/^http:\/\//, 'https://') : null;
+  if (m && m[1]) {
+    const url = m[1].replace(/^http:\/\//, 'https://');
+    if (!isJunkImage(url)) return url;
+  }
+  return null;
 }
 
 function stripHtml(str = '') {
@@ -58,9 +75,39 @@ function parseXML(xml) {
     const categories = [...block.matchAll(/<category><!\[CDATA\[([\s\S]*?)\]\]><\/category>/g)].map(m => m[1].trim());
     const mediaSrc   = block.match(/<media:content[^>]+url=["']([^"']+)["']/)?.[1];
     const enclosure  = block.match(/<enclosure[^>]+url=["']([^"']+)["']/)?.[1];
-    const thumbnail  = mediaSrc || enclosure || extractImage(contentRaw) || extractImage(descRaw) || null;
+    const extracted  = extractImage(contentRaw) || extractImage(descRaw);
+    const thumbnail  = (!isJunkImage(mediaSrc) ? mediaSrc : null) ||
+                       (!isJunkImage(enclosure) ? enclosure : null) ||
+                       extracted || null;
     items.push({ title, link, date, categories, description: stripHtml(descRaw), thumbnail });
   }
+  return items;
+}
+
+async function fetchOgImages(items) {
+  await Promise.all(
+    items.map(async (item) => {
+      if (item.thumbnail && !isJunkImage(item.thumbnail)) return;
+      if (!item.link) return;
+      try {
+        const pageRes = await nodeFetch(item.link, {
+          agent,
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+          timeout: 4000,
+        });
+        const html = await pageRes.text();
+        const ogM = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i) ||
+                    html.match(/<meta\s+content=["']([^"']+)["']\s+property=["']og:image["']/i);
+        if (ogM && ogM[1] && !isJunkImage(ogM[1])) {
+          item.thumbnail = ogM[1];
+        } else if (isJunkImage(item.thumbnail)) {
+          item.thumbnail = null;
+        }
+      } catch (err) {
+        if (isJunkImage(item.thumbnail)) item.thumbnail = null;
+      }
+    })
+  );
   return items;
 }
 
@@ -85,6 +132,7 @@ router.get('/wordpress', async (req, res) => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const xml = await response.text();
     const items = parseXML(xml).slice(0, count);
+    await fetchOgImages(items);
     rssCache.set(cacheKey, items);
     res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
     res.json({ status: 'ok', count: items.length, items, cached: false });
@@ -120,6 +168,7 @@ router.get('/', async (req, res) => {
     if (!response.ok) throw new Error(`Feed trả về HTTP ${response.status}`);
     const xml = await response.text();
     const items = parseXML(xml).slice(0, count);
+    await fetchOgImages(items);
     rssCache.set(cacheKey, items);
     res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
     res.json({ status: 'ok', feed: slug, count: items.length, items, cached: false });

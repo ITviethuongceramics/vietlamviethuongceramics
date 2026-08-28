@@ -16,7 +16,7 @@ import AdminUsersPage from './pages/AdminUsersPage';
 import './App.css';
 import TestsManager from './pages/TestsManager';
 import CandidateTestPage, { CandidateTestListPage, CandidateResultPage } from './pages/CandidateTestPage';
-
+import { HelmetProvider } from 'react-helmet-async';
 function FloatingContact() {
   return (
     <a href="tel:0905386888" className="floating-contact">

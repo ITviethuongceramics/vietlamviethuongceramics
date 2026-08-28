@@ -9,12 +9,10 @@ const headers = () => ({
   Authorization: `Bearer ${localStorage.getItem('candidate_token')}`
 });
 
-const MAX_VIOLATIONS = 2;
+const MAX_VIOLATIONS = 3;
 const TAB_OUT_TIMEOUT_MS = 30000;
 
-// ──────────────────────────────────────────────────────────────
-// Shuffle helpers
-// ──────────────────────────────────────────────────────────────
+
 
 /** Fisher-Yates — trả về mảng mới, không mutate */
 function shuffleArray(arr) {
@@ -127,6 +125,11 @@ function useAntiCheat({ assignmentId, onForceSubmit, isRequestingMic, isSubmitti
     if (forcedRef.current) return;
     forcedRef.current = true;
 
+    if (violationsRef.current === 0) {
+      violationsRef.current = 1;
+      setViolations(1);
+    }
+
     const locked = JSON.parse(localStorage.getItem('locked_assignments') || '[]');
     if (!locked.includes(String(assignmentId))) {
       locked.push(String(assignmentId));
@@ -193,7 +196,7 @@ function useAntiCheat({ assignmentId, onForceSubmit, isRequestingMic, isSubmitti
       if (isRequestingMic.current) return;
       if (isSubmitting?.current) return;
       isHidden.current = true;
-      tabOutTimer.current = setTimeout(() => triggerForceSubmit('blur_5s'), TAB_OUT_TIMEOUT_MS);
+      tabOutTimer.current = setTimeout(() => triggerForceSubmit('blur_3s'), TAB_OUT_TIMEOUT_MS);
       recordViolation('window_blur');
     };
     const handleFocus = () => {

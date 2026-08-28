@@ -1,4 +1,34 @@
+# Dependencies & Build
 node_modules/
-.env
 dist/
+dist.zip
+Frontend/dist/
+Frontend/dist.zip
+
+# Environment Variables & Secrets
+.env
+.env.*
+*.env
+Backend/.env
+Frontend/.env
+Backend/ca.pem
+*.pem
+*.json
+
+# Database Dumps & SQL files
+*.sql
+*.sqlite
+
+# Python tools containing sensitive keys
+cloudinary_tool.py
+migrate_cloudinary.py
+sync_aiven_database.py
+
+# System & IDE
+.DS_Store
+*.DS_Store
+.vscode/
+.idea/
+
+# Uploads & Temporary files
 uploads/

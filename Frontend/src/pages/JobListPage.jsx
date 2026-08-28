@@ -92,10 +92,11 @@ export default function JobListPage() {
 
   return (
     <>
-      <Helmet>
-        <title>Tuyển Dụng Việt Hương 2026 - {jobs.length} Vị Trí Đang Tuyển | Đà Nẵng</title>
-        <meta name="description" content="Xem tất cả vị trí tuyển dụng tại Công ty Gốm Sứ Việt Hương 2026. Kinh doanh, kế toán, hành chính tại Đà Nẵng, Hải Phòng, HCM." />
-      </Helmet>
+<Helmet>
+  <title>Việc Làm & Tuyển Dụng Gốm Sứ Việt Hương 2026 | Đà Nẵng - Hải Phòng - HCM</title>
+  <meta name="description" content="Tuyển dụng Viet Huong Ceramics - Kinh doanh, Kế toán, Logistics, Kỹ thuật sản xuất gốm sứ tại Đà Nẵng, Hải Phòng, Hồ Chí Minh 2026. Lương hấp dẫn, môi trường chuyên nghiệp." />
+  <meta name="keywords" content="tuyển dụng gốm sứ, việc làm Đà Nẵng, Viet Huong Ceramics, tuyển dụng 2026" />
+</Helmet>
       <div className="jlp">
 
         {/* HERO */}

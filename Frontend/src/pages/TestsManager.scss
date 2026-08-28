@@ -883,3 +883,13 @@ flex-wrap: wrap;
     .tm-answer-option__key { color: $success; }
   }
 }
+.tm-btn--warn {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+
+  &:hover {
+    background: #ffedd5;
+    border-color: #fb923c;
+  }
+}

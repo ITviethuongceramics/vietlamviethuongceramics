@@ -718,7 +718,8 @@ router.get('/assignments/:id/lock-status', authMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query(
       `SELECT
-         ta.id, ta.status, ta.is_locked, ta.violation_count,
+         ta.id, ta.status, ta.is_locked, 
+         GREATEST(IFNULL(ta.violation_count, 0), IFNULL(ta.violations, 0)) AS violation_count,
          ta.lock_reason, ta.locked_at,
          ap.full_name, ap.email,
          t.title AS test_title
@@ -766,6 +767,8 @@ const [rows] = await conn.query(
            submitted_at       = NULL,
            is_locked          = 0,
            violation_count    = 0,
+           violations         = 0,
+           last_violation     = NULL,
            lock_reason        = NULL,
            locked_at          = NULL,
            shuffled_questions = ?

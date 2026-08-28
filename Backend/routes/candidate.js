@@ -440,9 +440,12 @@ router.get('/assignments/:assignment_id/result', candidateMiddleware, async (req
 router.post('/assignments/:id/violations', candidateMiddleware, async (req, res) => {
   try {
     const { reason, count } = req.body;
+    const vCount = count || 1;
     await pool.query(
-      `UPDATE test_assignments SET violations = ?, last_violation = ? WHERE id = ? AND application_id = ?`,
-      [count, reason, req.params.id, req.candidate.application_id]
+      `UPDATE test_assignments 
+       SET violation_count = ?, violations = ?, last_violation = ? 
+       WHERE id = ? AND application_id = ?`,
+      [vCount, vCount, reason, req.params.id, req.candidate.application_id]
     );
     res.json({ ok: true });
   } catch (err) {
@@ -454,7 +457,11 @@ router.post('/assignments/:id/lock', candidateMiddleware, async (req, res) => {
   try {
     const { reason } = req.body;
     await pool.query(
-      `UPDATE test_assignments SET is_locked = 1, status = 'submitted', lock_reason = ? WHERE id = ? AND application_id = ?`,
+      `UPDATE test_assignments 
+       SET is_locked = 1, status = 'submitted', lock_reason = ?, locked_at = NOW(),
+           violation_count = GREATEST(IFNULL(violation_count, 0), 1),
+           violations = GREATEST(IFNULL(violations, 0), 1)
+       WHERE id = ? AND application_id = ?`,
       [reason, req.params.id, req.candidate.application_id]
     );
     res.json({ ok: true });

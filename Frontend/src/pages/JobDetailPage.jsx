@@ -98,8 +98,65 @@ export default function JobDetailPage() {
   return (
     <>
       <Helmet>
-        <title>{job.title} tại {job.location || 'Đà Nẵng'} 2026 - Việt Hương</title>
-        <meta name="description" content={`Tuyển ${job.title} tại ${job.location || 'Đà Nẵng'}. Lương: ${job.salary || 'thương lượng'}. Hạn nộp: ${job.deadline ? new Date(job.deadline).toLocaleDateString('vi-VN') : 'còn hạn'}. Ứng tuyển ngay!`} />
+        <title>
+          {`Tuyển ${job.title} ${job.location || 'Đà Nẵng'} 2026 - Gốm Sứ Việt Hương | Lương ${job.salary || 'Thương Lượng'}`}
+        </title>
+        <meta name="keywords" content={[
+          job.title,
+          `tuyển ${job.title}`,
+          `việc làm ${job.title}`,
+          `${job.title} ${job.location}`,
+          `tuyển dụng gốm sứ ${job.location}`,
+          'việt hương ceramics tuyển dụng',
+          `${job.department} ${job.location} 2026`
+        ].join(', ')} />
+        <link rel="canonical" href={`https://vieclam.viethuongceramics.com/tuyen-dung/${job.id}`} />
+
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org/",
+            "@type": "JobPosting",
+            "title": job.title,
+            "description": job.description || job.title,
+            "datePosted": job.created_at
+              ? new Date(job.created_at).toISOString().split('T')[0]
+              : new Date().toISOString().split('T')[0],
+            "validThrough": job.deadline
+              ? new Date(job.deadline).toISOString().split('T')[0]
+              : undefined,
+            "employmentType":
+              job.type === 'Toàn thời gian' ? 'FULL_TIME' :
+                job.type === 'Bán thời gian' ? 'PART_TIME' :
+                  job.type === 'Thực tập' ? 'INTERN' : 'OTHER',
+            "hiringOrganization": {
+              "@type": "Organization",
+              "name": "Công ty Cổ phần Xây dựng Gốm Sứ Việt Hương",
+              "sameAs": "https://vieclam.viethuongceramics.com",
+              "logo": "https://vieclam.viethuongceramics.com/logo.png"
+            },
+            "jobLocation": {
+              "@type": "Place",
+              "address": {
+                "@type": "PostalAddress",
+                "addressLocality": job.location || "Đà Nẵng",
+                "addressCountry": "VN"
+              }
+            },
+            ...(job.salary && {
+              "baseSalary": {
+                "@type": "MonetaryAmount",
+                "currency": "VND",
+                "value": {
+                  "@type": "QuantitativeValue",
+                  "description": job.salary,
+                  "unitText": "MONTH"
+                }
+              }
+            }),
+            "directApply": true,
+            "url": `https://vieclam.viethuongceramics.com/tuyen-dung/${job.id}`
+          })}
+        </script>
       </Helmet>
       <div className="jdp" ref={pageRef}>
 
@@ -144,6 +201,16 @@ export default function JobDetailPage() {
             </svg>
           </div>
         </div>
+        <h2 style={{
+          position: 'absolute',
+          width: 1,
+          height: 1,
+          overflow: 'hidden',
+          clip: 'rect(0,0,0,0)',
+          whiteSpace: 'nowrap'
+        }}>
+          {`Tuyển dụng ${job.title} tại ${job.location || 'Đà Nẵng'} - Việc làm ${job.department || 'gốm sứ'} lương hấp dẫn 2026`}
+        </h2>
 
         {/* ── BODY ── */}
         <div className="jdp-body">

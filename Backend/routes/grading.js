@@ -435,11 +435,12 @@ router.post('/assignments/:assignment_id/violations', candidateMiddleware, async
     );
     if (!rows.length) return res.status(404).json({ message: 'Không tìm thấy' });
  
+    const vCount = count || 1;
     await pool.query(
       `UPDATE test_assignments
-       SET violation_count = ?
+       SET violation_count = ?, violations = ?, last_violation = ?
        WHERE id = ?`,
-      [count || 1, assignment_id]
+      [vCount, vCount, reason || null, assignment_id]
     );
  
     res.json({ message: 'Ghi nhận vi phạm' });

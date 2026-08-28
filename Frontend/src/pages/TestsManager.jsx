@@ -128,13 +128,32 @@ const [searchTest, setSearchTest] = useState('');
     else showToast(d.message, 'error');
   };
 
-  const handleViewResult = async (assignmentId) => {
-    const r = await fetch(`${API}/api/tests/assignments/${assignmentId}/answers`, { headers: headers() });
-    const d = await r.json();
-    if (r.ok) setDetailResult(d);
-    else showToast(d.message, 'error');
-  };
-
+ const handleViewResult = async (assignmentId, needsGrading = false) => {
+  if (needsGrading) {
+    // Bài submitted + bị khóa → trigger AI chấm trước, rồi mới xem
+    showToast('Đang yêu cầu trợ lý ảo chấm điểm, vui lòng chờ...', 'info');
+    try {
+      const gr = await fetch(`${API}/api/grading/assignments/${assignmentId}/grade`, {
+        method: 'POST', headers: headers()
+      });
+      const gd = await gr.json();
+      if (!gr.ok) {
+        showToast(gd.message || 'Chấm điểm thất bại', 'error');
+        return;
+      }
+      showToast('Chấm điểm hoàn tất!');
+      fetchAssignments(); // cập nhật status → graded trên bảng
+    } catch {
+      showToast('Lỗi kết nối khi chấm điểm', 'error');
+      return;
+    }
+  }
+  // Load kết quả (dù vừa chấm xong hay đã graded sẵn)
+  const r = await fetch(`${API}/api/tests/assignments/${assignmentId}/answers`, { headers: headers() });
+  const d = await r.json();
+  if (r.ok) setDetailResult(d);
+  else showToast(d.message, 'error');
+};
   const handleViewLock = async (assignmentId) => {
     const r = await fetch(`${API}/api/tests/assignments/${assignmentId}/lock-status`, { headers: headers() });
     const d = await r.json();
@@ -307,9 +326,18 @@ const filteredTests = tests.filter(t =>
                       </td>
                       <td>
                         <div className="tm-row-actions">
-                          {a.status === 'graded' && (
-                            <button className="tm-btn tm-btn--sm" onClick={() => handleViewResult(a.id)}>Kết quả</button>
-                          )}
+                   {a.status === 'graded' && (
+  <button className="tm-btn tm-btn--sm" onClick={() => handleViewResult(a.id)}>Kết quả</button>
+)}
+{a.status === 'submitted' && a.is_locked && (
+  <button
+    className="tm-btn tm-btn--sm tm-btn--warn"
+    onClick={() => handleViewResult(a.id, true)}
+    title="Bài nộp nhưng chưa chấm do bị khóa — nhấn để AI chấm rồi xem kết quả"
+  >
+    Chấm 
+  </button>
+)}
                           {(a.is_locked || a.violation_count > 0) && (
                             <button className="tm-btn tm-btn--sm tm-btn--ghost" onClick={() => handleViewLock(a.id)}>🔒 Vi phạm</button>
                           )}
