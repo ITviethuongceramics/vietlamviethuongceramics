@@ -12,6 +12,9 @@ const pool = mysql.createPool({
   ssl: (isAiven || process.env.NODE_ENV === 'production') ? { rejectUnauthorized: false } : false,
   waitForConnections: true,
   connectionLimit: 10,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
+  idleTimeout: 60000,
 });
 
 module.exports = pool;
