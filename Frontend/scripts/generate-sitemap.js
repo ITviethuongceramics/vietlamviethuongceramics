@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const API_URL = 'https://recruitment-viet-huong-4g9o.onrender.com/api/jobs';
+const API_URL = 'https://vietlamviethuongceramics-1.onrender.com/api/jobs';
 const BASE = 'https://vieclam.viethuongceramics.com';
 const OUT  = path.join(__dirname, '../public/sitemap.xml');
 

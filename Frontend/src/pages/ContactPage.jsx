@@ -11,7 +11,7 @@ const STATIC_BRANCHES = [
     phone: '0905.386.888',
     lat: 16.0378,
     lng: 108.2105,
-    image_url: 'https://res.cloudinary.com/dq8cmcln9/image/upload/v1775449642/danang_zprcls.webp',
+    image_url: 'https://res.cloudinary.com/kto2dghj/image/upload/v1775449642/danang_zprcls.webp',
   },
   {
     id: 'hp',
@@ -21,7 +21,7 @@ const STATIC_BRANCHES = [
     phone: '0905.386.888',
     lat: 20.7963,
     lng: 106.7118,
-    image_url: 'https://res.cloudinary.com/dq8cmcln9/image/upload/v1775449642/haiphong_dn94ip.jpg',
+    image_url: 'https://res.cloudinary.com/kto2dghj/image/upload/v1775449642/haiphong_dn94ip.jpg',
   },
   {
     id: 'hcm',
