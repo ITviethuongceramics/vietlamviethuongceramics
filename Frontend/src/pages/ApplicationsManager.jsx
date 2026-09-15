@@ -35,7 +35,7 @@ export default function ApplicationsManager({ token }) {
   const [offerData, setOfferData] = useState({
     position: '',
     start_date: '',
-    work_location: '133 Trung Lương 14 – Phường Hòa Xuân – Thành phố Đà Nẵng',
+    work_location: '246 Nguyễn Hữu Thọ, Phường Hòa Cường,TP. Đà Nẵng',
     probation_period: '2',
     salary: '',
     probation_salary_percent: '85',
