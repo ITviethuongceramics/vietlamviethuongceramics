@@ -94,7 +94,7 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
     ['3', 'Địa điểm làm thủ tục nhận việc', work_location],
     ['4', 'Thời gian thử việc', `${probation_period} tháng`],
     ['5', 'Lương Gross chính thức', `<strong style="color:#B91C1C;">${formatMoney(salary)}</strong>`],
-   ['6', 'Lương thử việc', `${probation_salary_percent}% lương Gross`],
+    ['6', 'Lương thử việc', `${probation_salary_percent}% lương Gross`],
     ['7', 'Thời gian làm việc', work_schedule],
   ];
 
@@ -231,7 +231,7 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
           <tr>
             <td style="color:#555555;font-family:Arial,sans-serif;font-size:12px;line-height:1.9;">
               <strong style="color:#B91C1C;font-size:13px;">Công ty cổ phần xây dựng gốm sứ Việt Hương</strong><br>
-              Trụ sở chính: 133 Trung Lương 14, P. Hòa Xuân, TP. Đà Nẵng<br>
+              Trụ sở chính: 472 đường Hùng Vương, xã Nam Phước, thành phố Đà Nẵng, Việt Nam<br>
               <a href="https://viethuongceramics.com" style="color:#B91C1C;text-decoration:none;">viethuongceramics.com</a> &nbsp;|&nbsp; 0905.386.888
             </td>
             <td style="text-align:right;vertical-align:middle;">
@@ -350,7 +350,7 @@ router.post('/send-offer', authMiddleware, async (req, res) => {
     await sendEmail({
       to: app.email,
       subject: `THƯ MỜI NHẬN VIỆC - ${position} - VIET HUONG CERAMICS`,
-      cc: 'itviethuong@viethuongceramics.com', 
+      cc: 'itviethuong@viethuongceramics.com',
       html: emailHTML,
     });
 
