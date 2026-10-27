@@ -86,6 +86,7 @@ const upload = multer({
 // ── HELPERS ───────────────────────────────────────────────────
 const formatMoney = (num) => new Intl.NumberFormat('vi-VN').format(num) + ' VNĐ';
 function getOfferEmailHTML({ app, position, formattedStartDate, work_location, probation_period, salary, probation_salary_percent, probationSalary, work_schedule }) {
+  const logoIconUrl = process.env.LOGO_ICON_URL || process.env.LOGO_URL || '';
   const logoUrl = process.env.LOGO_URL || '';
 
   const rows = [
@@ -151,12 +152,12 @@ function getOfferEmailHTML({ app, position, formattedStartDate, work_location, p
               <table cellpadding="0" cellspacing="0">
                 <tr>
                   <td class="logo-td" style="padding-right:12px;vertical-align:middle;">
-                    <img class="logo-img" src="${logoUrl}" alt="Việt Hương" width="58" height="58" style="display:block;border-radius:8px;background:#fff;padding:5px;object-fit:contain;" />
+                    <img class="logo-img" src="${logoIconUrl}" alt="Việt Hương" width="58" height="58" style="display:block;border-radius:8px;background:#fff;padding:5px;object-fit:contain;" />
                   </td>
                   <td style="vertical-align:middle;">
                     <div class="company-name" style="color:#fff;font-family:Arial,sans-serif;font-size:13px;font-weight:700;letter-spacing:0.4px;line-height:1.4;">VIET HUONG CERAMICS</div>
                     <div class="company-sub" style="color:rgba(255,255,255,0.72);font-family:Arial,sans-serif;font-size:11px;margin-top:2px;">Công ty cổ phần xây dựng gốm sứ Việt Hương</div>
-                    <div class="company-addr" style="color:rgba(255,255,255,0.60);font-family:Arial,sans-serif;font-size:10px;margin-top:1px;">133 Trung Lương 14, P. Hòa Xuân, TP. Đà Nẵng</div>
+                    <div class="company-addr" style="color:rgba(255,255,255,0.60);font-family:Arial,sans-serif;font-size:10px;margin-top:1px;">472 đường Hùng Vương, xã Nam Phước, TP. Đà Nẵng</div>
                   </td>
                 </tr>
               </table>
