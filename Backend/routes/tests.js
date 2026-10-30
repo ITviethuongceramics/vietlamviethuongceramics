@@ -480,6 +480,199 @@ router.get('/assignments/list', authMiddleware, async (req, res) => {
   }
 });
 
+// ── EMAIL GỬI BÀI TEST ──────────────────────────────────────────────
+async function sendEmail({ to, subject, html, fromName = 'VIET HUONG CERAMICS - Phòng Nhân Sự' }) {
+  const body = {
+    sender: { name: fromName, email: process.env.BREVO_FROM },
+    to: [{ email: to }],
+    subject,
+    htmlContent: html,
+  };
+
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': process.env.BREVO_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) throw new Error(`Brevo error: ${await res.text()}`);
+  return res.json();
+}
+
+function getTestAssignmentEmailHTML({ app, test, deadline }) {
+  const logoIconUrl = process.env.LOGO_ICON_URL || 'https://res.cloudinary.com/kto2dghj/image/upload/v1793092335/viethuong/viethuong_logo_icon.png';
+  const logoUrl = process.env.LOGO_URL || 'https://res.cloudinary.com/kto2dghj/image/upload/v1793092097/viethuong/viethuong_logo_full.png';
+
+  const typeLabels = {
+    excel_word: 'Kỹ năng Excel / Word',
+    typing: 'Kiểm tra tốc độ đánh máy',
+    english: 'Kiểm tra Tiếng Anh (Trắc nghiệm / Tự luận / Nói)',
+    chinese: 'Kiểm tra Tiếng Trung',
+    custom: 'Bài kiểm tra chuyên môn tổng hợp',
+    multiple_choice: 'Trắc nghiệm kiến thức chuyên môn',
+  };
+  const testTypeLabel = typeLabels[test.type] || test.type || 'Kiểm tra năng lực chuyên môn';
+
+  let formattedDeadline = 'Không giới hạn';
+  if (deadline) {
+    const d = new Date(deadline);
+    if (!isNaN(d.getTime())) {
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      formattedDeadline = `${hours}:${minutes} ngày ${day}/${month}/${year}`;
+    }
+  }
+
+  const rows = [
+    ['1', 'Vị trí ứng tuyển', app.position || 'Nhân sự'],
+    ['2', 'Tên bài kiểm tra', `<strong>${test.title}</strong>`],
+    ['3', 'Hình thức bài thi', testTypeLabel],
+    ['4', 'Thời gian làm bài', `<strong style="color:#B91C1C;">${test.time_limit || 30} phút</strong> (tính từ lúc bắt đầu làm)`],
+    ['5', 'Hạn chót nộp bài', `<strong style="color:#B91C1C;">${formattedDeadline}</strong>`],
+    ['6', 'Tài khoản đăng nhập', `<strong>${app.email}</strong>`],
+    ['7', 'Mật khẩu đăng nhập', 'Chính địa chỉ email của bạn <em>(hoặc mật khẩu bạn đã đổi)</em>'],
+  ];
+
+  const infoRows = rows.map((row, i) => `
+    <tr style="background:${i % 2 === 0 ? '#ffffff' : '#fdf6f6'};">
+      <td width="32" style="padding:11px 0 11px 14px;vertical-align:top;">
+        <div style="width:22px;height:22px;border-radius:50%;background:#B91C1C;color:#fff;font-size:11px;font-weight:700;font-family:Arial,sans-serif;text-align:center;line-height:22px;">${row[0]}</div>
+      </td>
+      <td width="185" style="padding:11px 8px;font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:#B91C1C;vertical-align:top;">${row[1]}</td>
+      <td style="padding:11px 14px 11px 0;font-size:14px;color:#222;vertical-align:top;line-height:1.7;">${row[2]}</td>
+    </tr>
+  `).join('');
+
+  return `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#f0eded;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0eded;padding:32px 0;">
+  <tr><td align="center">
+  <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 6px 32px rgba(0,0,0,0.12);max-width:600px;width:100%;">
+
+    <!-- HEADER -->
+    <tr>
+      <td style="padding:22px 28px 0;background:#ffffff;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td width="58" style="vertical-align:middle;">
+              <img src="${logoIconUrl}" alt="Việt Hương Ceramic" width="54" height="54" style="display:block;border-radius:6px;object-fit:contain;" />
+            </td>
+            <td style="padding-left:14px;vertical-align:middle;">
+              <div style="color:#B91C1C;font-size:13px;font-weight:800;letter-spacing:0.8px;font-family:Arial,sans-serif;text-transform:uppercase;">CÔNG TY CỔ PHẦN XÂY DỰNG GỐM SỨ VIỆT HƯƠNG</div>
+              <div style="color:#888;font-size:11px;margin-top:3px;font-family:Arial,sans-serif;">Hệ thống tuyển dụng &amp; Đánh giá năng lực trực tuyến</div>
+              <div style="color:#aaa;font-size:10px;margin-top:1px;font-family:Arial,sans-serif;">472 đường Hùng Vương, xã Nam Phước, thành phố Đà Nẵng, Việt Nam</div>
+            </td>
+          </tr>
+        </table>
+        <div style="height:2px;background:#B91C1C;margin-top:16px;"></div>
+      </td>
+    </tr>
+
+    <!-- TITLE BANNER -->
+    <tr>
+      <td style="background:#B91C1C;padding:20px 24px 22px;text-align:center;">
+        <div style="color:rgba(255,255,255,0.85);font-size:11px;letter-spacing:3px;text-transform:uppercase;font-family:Arial,sans-serif;font-weight:600;">THÔNG BÁO TỪ PHÒNG NHÂN SỰ</div>
+        <div style="color:#ffffff;font-size:20px;font-weight:900;letter-spacing:1.5px;margin-top:6px;font-family:Arial,sans-serif;text-transform:uppercase;">THƯ MỜI LÀM BÀI KIỂM TRA NĂNG LỰC</div>
+        <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:5px;font-family:Arial,sans-serif;">Vị trí ứng tuyển: ${app.position || 'Nhân sự'}</div>
+      </td>
+    </tr>
+
+    <!-- GREETING -->
+    <tr>
+      <td style="padding:28px 30px 10px;">
+        <p style="margin:0 0 14px;font-size:15px;color:#111;font-family:Arial,sans-serif;">Kính gửi <strong>Anh/Chị ${app.full_name}</strong>,</p>
+        <p style="margin:0 0 14px;font-size:14px;color:#444;line-height:1.85;font-family:Arial,sans-serif;">
+          Lời đầu tiên, <strong>Việt Hương Ceramics</strong> xin chân thành cảm ơn Anh/Chị đã quan tâm và nộp hồ sơ ứng tuyển vào công ty chúng tôi.
+        </p>
+        <p style="margin:0 0 16px;font-size:14px;color:#444;line-height:1.85;font-family:Arial,sans-serif;">
+          Để phục vụ công tác đánh giá chuyên môn và mức độ phù hợp cho vị trí <strong style="color:#B91C1C;">${app.position || 'ứng tuyển'}</strong>, Phòng Nhân sự trân trọng mời Anh/Chị tham gia hoàn thành bài kiểm tra năng lực trực tuyến với thông tin chi tiết dưới đây:
+        </p>
+      </td>
+    </tr>
+
+    <!-- TABLE INFO -->
+    <tr>
+      <td style="padding:0 20px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #f0d5d2;border-radius:8px;overflow:hidden;border-collapse:collapse;">
+          ${infoRows}
+        </table>
+      </td>
+    </tr>
+
+    <!-- CTA BUTTON & ACCESS GUIDE -->
+    <tr>
+      <td style="padding:24px 30px;text-align:center;">
+        <a href="https://vieclam.viethuongceramics.com/candidate" style="background:#B91C1C;color:#ffffff;text-decoration:none;padding:15px 36px;border-radius:8px;font-weight:bold;font-size:15px;display:inline-block;letter-spacing:0.5px;box-shadow:0 4px 14px rgba(185,28,28,0.35);font-family:Arial,sans-serif;">
+          TRUY CẬP VÀO LÀM BÀI TEST NGAY &rarr;
+        </a>
+        <div style="font-size:12px;color:#777;margin-top:10px;font-family:Arial,sans-serif;">
+          Hoặc truy cập trực tiếp qua liên kết: <a href="https://vieclam.viethuongceramics.com/candidate" style="color:#B91C1C;word-break:break-all;">https://vieclam.viethuongceramics.com/candidate</a>
+        </div>
+      </td>
+    </tr>
+
+    <!-- INSTRUCTIONS -->
+    <tr>
+      <td style="padding:0 30px 15px;">
+        <div style="background:#fff7f7;border-left:4px solid #B91C1C;border-radius:0 8px 8px 0;padding:14px 18px;">
+          <div style="font-size:13px;font-weight:700;color:#B91C1C;margin-bottom:6px;font-family:Arial,sans-serif;">QUY ĐỊNH &amp; LƯU Ý KHI LÀM BÀI:</div>
+          <ul style="margin:0;padding-left:18px;font-size:13px;color:#555;line-height:1.75;font-family:Arial,sans-serif;">
+            <li>Vui lòng sử dụng máy tính/laptop có kết nối mạng Internet ổn định và trình duyệt (Chrome, Cốc Cốc, Edge).</li>
+            <li>Hệ thống có cơ chế tự động đếm ngược thời gian và giám sát bài thi (chống chuyển tab / mở ứng dụng khác).</li>
+            <li>Hãy đảm bảo hoàn thành bài test trước thời hạn <strong>${formattedDeadline}</strong>.</li>
+          </ul>
+        </div>
+      </td>
+    </tr>
+
+    <!-- SIGNATURE -->
+    <tr>
+      <td style="padding:15px 30px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #f2e2e2;padding-top:18px;">
+          <tr>
+            <td>
+              <div style="font-size:13px;color:#666;font-family:Arial,sans-serif;">Trân trọng,</div>
+              <div style="font-size:14px;color:#111;font-weight:700;margin-top:4px;font-family:Arial,sans-serif;">Phòng Nhân sự &amp; Tuyển dụng</div>
+              <div style="font-size:13px;color:#B91C1C;font-weight:700;margin-top:2px;font-family:Arial,sans-serif;">Công ty cổ phần xây dựng gốm sứ Việt Hương</div>
+              <div style="font-size:12px;color:#888;margin-top:4px;font-family:Arial,sans-serif;">Hotline: 0905.386.888 &nbsp;|&nbsp; Email: itviethuong@viethuongceramics.com</div>
+            </td>
+            <td align="right" valign="bottom" width="100">
+              <img src="${logoUrl}" alt="Logo" width="70" style="display:block;border-radius:6px;object-fit:contain;" />
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- FOOTER -->
+    <tr>
+      <td style="background:#2c1a0e;padding:18px 24px;text-align:center;">
+        <div style="color:rgba(255,255,255,0.7);font-size:11px;line-height:1.8;font-family:Arial,sans-serif;">
+          &copy; ${new Date().getFullYear()} Công ty cổ phần xây dựng gốm sứ Việt Hương. All rights reserved.<br>
+          Trụ sở chính: 472 đường Hùng Vương, xã Nam Phước, thành phố Đà Nẵng, Việt Nam<br>
+          Website: <a href="https://vieclam.viethuongceramics.com" style="color:#f59e0b;text-decoration:none;">vieclam.viethuongceramics.com</a>
+        </div>
+      </td>
+    </tr>
+
+  </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+}
+
 // POST /api/tests/assignments — Assign bài test + tạo shuffled_questions
 router.post('/assignments', authMiddleware, async (req, res) => {
   const conn = await pool.getConnection();
@@ -502,7 +695,7 @@ router.post('/assignments', authMiddleware, async (req, res) => {
 
     // Kiểm tra test tồn tại và đang active
     const [tests] = await conn.query(
-      'SELECT id, title FROM tests WHERE id = ? AND is_active = 1',
+      'SELECT id, title, type, time_limit, passing_score FROM tests WHERE id = ? AND is_active = 1',
       [test_id]
     );
     if (!tests.length) {
@@ -520,7 +713,7 @@ router.post('/assignments', authMiddleware, async (req, res) => {
     for (const appId of appIds) {
       try {
         const [apps] = await conn.query(
-          'SELECT id, full_name, email, status FROM applications WHERE id = ?',
+          'SELECT id, full_name, email, position, status FROM applications WHERE id = ?',
           [appId]
         );
         if (!apps.length) {
@@ -563,8 +756,9 @@ router.post('/assignments', authMiddleware, async (req, res) => {
 
         results.success.push({
           application_id: appId,
-          name:  apps[0].full_name,
-          email: apps[0].email
+          name:     apps[0].full_name,
+          email:    apps[0].email,
+          position: apps[0].position,
         });
       } catch (innerErr) {
         results.errors.push({ application_id: appId, reason: innerErr.message });
@@ -572,6 +766,27 @@ router.post('/assignments', authMiddleware, async (req, res) => {
     }
 
     await conn.commit();
+
+    // ── Tự động gửi email mời làm bài test đến các ứng viên được assign thành công ──
+    const testInfo = tests[0];
+    for (const item of results.success) {
+      try {
+        const emailHTML = getTestAssignmentEmailHTML({
+          app: { full_name: item.name, email: item.email, position: item.position },
+          test: testInfo,
+          deadline,
+        });
+
+        await sendEmail({
+          to: item.email,
+          subject: `THƯ MỜI LÀM BÀI KIỂM TRA NĂNG LỰC - ${testInfo.title.toUpperCase()} - VIET HUONG CERAMICS`,
+          html: emailHTML,
+        });
+        console.log(`[TEST EMAIL OK] Đã gửi thư mời làm bài test đến: ${item.email}`);
+      } catch (emailErr) {
+        console.error(`[TEST EMAIL ERROR] Gửi thư cho ${item.email} thất bại:`, emailErr.message);
+      }
+    }
 
     res.status(201).json({
       message: `Assign thành công ${results.success.length}/${appIds.length} ứng viên`,
